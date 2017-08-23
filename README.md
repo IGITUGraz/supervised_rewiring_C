@@ -1,3 +1,4 @@
 # Supervised Rewiring: Implementation in C
 
-The target of this project is to implement the supervised rewiring in C, so that it can be used on Santos and the later chips from Dresden.
+The supervised rewiring to classify the MNIST digit is implemented here in C.
+The end goal is to develop a working version of this algorithm for the Santos chip and Spinnaker 2.
