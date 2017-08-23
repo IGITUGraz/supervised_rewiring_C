@@ -427,8 +427,7 @@ void softmax(float *a, uint size_a, float *result, uint size_result){
         if(a_max<a[k])
             a_max = a[k];
     }
-
-
+    
     sum=0;
     for(k=0; k<size_a; k++){
         result[k] = exp(a[k] - a_max);
