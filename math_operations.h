@@ -10,6 +10,7 @@
 
     // a constant definition exported by library:
     #define SPARSITY_LIMIT  .75
+
     #define NELEMS(x)  (sizeof(x) / sizeof((x)[0]))
 
     /*
@@ -42,11 +43,13 @@
     void set_sign(sparse_weight_matrix *M, uint16_t entry_idx, bool val);
     float get_weight_by_entry(sparse_weight_matrix *M, int k);
     float get_weight_by_row_col_pair(sparse_weight_matrix *M, int i, int j);
-    void set_dimensions(sparse_weight_matrix *M, int n_rows, int n_cols);
 
+    void set_dimensions(sparse_weight_matrix *M, int n_rows, int n_cols);
     void check_sparse_matrix_entry_ordering(sparse_weight_matrix *M);
 
     void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity);
+    void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float value, bool sign);
+
     void print_weight_matrix(sparse_weight_matrix *M);
     void print_vector(float *v, uint size);
 

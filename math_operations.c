@@ -61,7 +61,6 @@ float randn_kiss( )
     }
 }
 
-
 /**
  * Fill-in a sparse matrix with random value.
  * It uses a Xavier initialization of the form: mask * randn(n_in,n_out)/n_in,
@@ -101,6 +100,72 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity) {
 
     M->number_of_entries = k;
 }
+
+/**
+ *  Add an entry in the matrix in a free slot.
+ *  This is not trivial because the order in the sparse matrix need to be respected.
+ * @param M
+ * @param row
+ * @param col
+ * @param value
+ * @param sign
+ */
+void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float value, bool sign){
+
+    uint16_t k;
+
+    uint16_t pushed_row = row;
+    uint16_t pushed_col = col;
+    float pushed_theta = value;
+    bool pushed_sign = sign;
+
+    uint16_t replaced_row;
+    uint16_t replaced_col;
+    float replaced_theta;
+    bool replaced_sign;
+
+    // Find the first entry that arrives after the new one.
+    k=0;
+    while(M->rows[k] < row)
+        k++;
+
+    while(M->rows[k] == row && M->cols[k] < col)
+        k++;
+
+    // Make sure that the entry does not exist already.
+    assert(M->rows[k] != row || M->cols[k] != col);
+
+    // Push-replace the value in the vector until there is only the last entry left.
+    while(k < M->number_of_entries){
+        replaced_row = M->rows[k];
+        replaced_col = M->cols[k];
+        replaced_theta = M->thetas[k];
+        replaced_sign = get_sign(M,k);
+
+        M->rows[k] = pushed_row;
+        M->cols[k] = pushed_col;
+        M->thetas[k] = pushed_theta;
+        set_sign(M,k,pushed_sign);
+
+        pushed_row = replaced_row;
+        pushed_col = replaced_col;
+        pushed_theta = replaced_theta;
+        pushed_sign = replaced_sign;
+
+        k++;
+    }
+
+    // Insert the last one
+    M->rows[k] = pushed_row;
+    M->cols[k] = pushed_col;
+    M->thetas[k] = pushed_theta;
+    set_sign(M,k,pushed_sign);
+
+    M->number_of_entries += 1;
+    assert(M->number_of_entries < M->max_entries);
+    check_sparse_matrix_entry_ordering(M);
+}
+
 
 /**
  * Set the dimensions of the matrix and defines the maxium number of entries.

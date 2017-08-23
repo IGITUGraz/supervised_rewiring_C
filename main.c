@@ -35,6 +35,10 @@ int main() {
     printf("\nPrint weight matrix:\n");
     print_weight_matrix(&M);
 
+    printf("\nAdding a new entry:\n");
+    put_new_entry(&M,1,2,0.1,true);
+    print_weight_matrix(&M);
+
     // Test math calculations
 
     float a[4] = {2,1,3,4};
@@ -69,8 +73,7 @@ int main() {
         printf("  %u, %u -> %.2g \n",M.rows[k],M.cols[k],gradient_wrt_theta_entry(&M,dot_result,a,k));
     }
 
-
-    printf("\nsoftmax:\n");
+    printf("\nTest of the softmax:\n");
     printf("a: ");
     print_vector(a,NELEMS(a));
     softmax(a,NELEMS(a),softmax_result,NELEMS(softmax_result));
