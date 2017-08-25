@@ -1,6 +1,14 @@
 #include <jmorecfg.h>
 #include "math_operations.h"
 
+/***
+ * Library of math opeartions required to implement backprop in feedforward relu units with rewiring.
+ * The weights are very sparse therefore it uses a minimal amounf of memory.
+ *
+ * Authors: Guillaume Bellec and Florian Kelber
+ * Date: 25th of August 2017
+ */
+
 // a constant definition exported by library:
 #define SPARSITY_LIMIT  .99 // SET to 0.02 to fit on the hardware
 #define LEARNING_RATE 0.5
