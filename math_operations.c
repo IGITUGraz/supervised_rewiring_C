@@ -1,4 +1,12 @@
+#include <jmorecfg.h>
 #include "math_operations.h"
+
+// a constant definition exported by library:
+#define SPARSITY_LIMIT  .99 // SET to 0.02 to fit on the hardware
+#define LEARNING_RATE 0.5
+#define L1_COEFF 0.00001
+#define NOISE_AMPLITUDE 0.000001
+#define EPSILON_TURNOVER 0.000001
 
 /**
  * Generate a random integer.
@@ -85,7 +93,7 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity) {
 
                 M->rows[k] = i;
                 M->cols[k] = j;
-                M->thetas[k] = value;
+                M->thetas[k] = fabs(value);
 
                 if(rand_kiss() > 0.5)
                     set_sign(M,k,true);
@@ -104,13 +112,14 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity) {
 /**
  *  Add an entry in the matrix in a free slot.
  *  This is not trivial because the order in the sparse matrix need to be respected.
+ *
  * @param M
  * @param row
  * @param col
  * @param value
  * @param sign
  */
-void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float value, bool sign){
+void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float value, bool sign, bool fail_if_exist){
 
     uint16_t k;
 
@@ -124,6 +133,9 @@ void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float va
     float replaced_theta;
     bool replaced_sign;
 
+    assert(row < M->n_rows);
+    assert(col < M->n_cols);
+
     // Find the first entry that arrives after the new one.
     k=0;
     while(M->rows[k] < row)
@@ -133,7 +145,13 @@ void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float va
         k++;
 
     // Make sure that the entry does not exist already.
-    assert(M->rows[k] != row || M->cols[k] != col);
+    if(fail_if_exist)
+        assert(M->rows[k] != row || M->cols[k] != col);
+    else{
+        if(M->rows[k] == row && M->cols[k] == col){
+            return;
+        }
+    }
 
     // Push-replace the value in the vector until there is only the last entry left.
     while(k < M->number_of_entries){
@@ -163,9 +181,64 @@ void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float va
 
     M->number_of_entries += 1;
     assert(M->number_of_entries < M->max_entries);
-    check_sparse_matrix_entry_ordering(M);
+    check_sparse_matrix_format(M);
 }
 
+/**
+ * Compute the rectified linear function of v in place.
+ * @param v
+ * @param size_v
+ */
+void relu_in_place(float *v, uint size_v){
+    uint k;
+
+    for(k=0; k<size_v; k++){
+        if (v[k] < 0)
+            v[k] = 0;
+    }
+}
+
+/**
+ * Delete an entry in the matrix.
+ * @param M
+ * @param entry_idx
+ */
+void delete_entry(sparse_weight_matrix *M, uint16_t entry_idx){
+
+    uint16_t k;
+    assert(entry_idx < M->number_of_entries);
+
+    for(k = entry_idx; k < M->number_of_entries-1; k ++){
+        M->rows[k] = M->rows[k+1];
+        M->cols[k] = M->cols[k+1];
+        M->thetas[k] = M->thetas[k+1];
+        set_sign(M,k,get_sign(M,k+1));
+    }
+
+    M->number_of_entries -= 1;
+
+}
+
+/**
+ * Make the substraction of two vectors
+ * @param a
+ * @param size_a
+ * @param b
+ * @param size_b
+ * @param result
+ * @param size_result
+ */
+void vector_substraction(float *a, uint size_a, float* b, uint size_b, float *result, uint size_result){
+    assert(size_a == size_b);
+    assert(size_a == size_result);
+
+    uint k;
+
+    for(k=0; k<size_a; k++){
+        result[k] = a[k] - b[k];
+    }
+
+}
 
 /**
  * Set the dimensions of the matrix and defines the maxium number of entries.
@@ -225,7 +298,7 @@ float get_weight_by_entry(sparse_weight_matrix *M, int k ){
 }
 
 /**
- * Get the weight of a matrix at a given column index.
+ * Get the weight of a matrix at a given pair of row/column index.
  * WARNING:
  *  This is very slow because it require to search in the array.
  *  Use get_weight_by_entry if efficiency is an issue.
@@ -250,6 +323,60 @@ float get_weight_by_row_col_pair(sparse_weight_matrix *M, int i, int j) {
 }
 
 /**
+ * Get the parameter theta of a matrix at a given pair of row/column index.
+ * WARNING:
+ *  This is very slow because it require to search in the array.
+ *  Use get_weight_by_entry if efficiency is an issue.
+ *
+ * @param M
+ * @param i
+ * @param j
+ * @return
+ */
+float get_theta_by_row_col_pair(sparse_weight_matrix *M, int i, int j) {
+    float th;
+    int k;
+
+    th = 0;
+    for(k=0; k < M->number_of_entries; k++){
+        if(M->rows[k] == i && M->cols[k] == j)
+            th = M->thetas[k];
+    }
+
+    return th;
+
+}
+
+
+/**
+ * Get the sign of a matrix at a given pair of row/column index.
+ * WARNING:
+ *  This is very slow because it require to search in the array.
+ *  Use get_weight_by_entry if efficiency is an issue.
+ *
+ * @param M
+ * @param i
+ * @param j
+ * @return
+ */
+int get_sign_by_row_col_pair(sparse_weight_matrix *M, int i, int j) {
+    int s;
+    int k;
+
+    s = 0;
+    for(k=0; k < M->number_of_entries; k++){
+        if(M->rows[k] == i && M->cols[k] == j)
+            if(get_sign(M,k))
+                s = 1;
+            else
+                s = -1;
+    }
+
+    return s;
+
+}
+
+/**
  * Print a weight matrix in the python matrix format.
  * @param v
  * @param size
@@ -259,7 +386,7 @@ void print_weight_matrix(sparse_weight_matrix *M) {
     int i;
     int j;
 
-    check_sparse_matrix_entry_ordering(M);
+    check_sparse_matrix_format(M);
 
     printf("[");
     for(i = 0; i < M->n_rows; i += 1){
@@ -269,6 +396,59 @@ void print_weight_matrix(sparse_weight_matrix *M) {
         printf("[");
         for(j = 0; j < M->n_cols; j += 1){
             printf("%.2g",get_weight_by_row_col_pair(M,i,j));
+            if(j<M->n_cols-1)
+                printf(", ");
+
+        }
+        printf("]");
+        if(i<M->n_rows-1)
+            printf(", ");
+    }
+    printf("] \n");
+}
+
+
+/**
+ * Print a weight matrix in the python matrix format.
+ * @param v
+ * @param size
+ */
+void print_sign_and_theta(sparse_weight_matrix *M) {
+
+    int i;
+    int j;
+    bool s;
+
+    check_sparse_matrix_format(M);
+
+    printf("sign:\n [");
+    for(i = 0; i < M->n_rows; i += 1){
+        if(i>0)
+            printf("\n");
+
+        printf("[");
+        for(j = 0; j < M->n_cols; j += 1){
+            printf("%d",get_sign_by_row_col_pair(M,i,j));
+
+            if(j<M->n_cols-1)
+                printf(", ");
+
+        }
+        printf("]");
+        if(i<M->n_rows-1)
+            printf(", ");
+    }
+    printf("] \n");
+
+    printf("\nthetas:\n [");
+    for(i = 0; i < M->n_rows; i += 1){
+        if(i>0)
+            printf("\n");
+
+        printf("[");
+        for(j = 0; j < M->n_cols; j += 1){
+            printf("%.2g",get_theta_by_row_col_pair(M,i,j));
+
             if(j<M->n_cols-1)
                 printf(", ");
 
@@ -300,7 +480,7 @@ void print_vector(float *v, uint size){
 }
 
 /**
- * The sparse matrix vector dot is done as follows:
+ * The sparse matrix vector right-dot is done as follows:
  * - For each row,
  *      Check the entries in the matrix that are contained in that row.
  *      Multiply them with the corresponding vector entry
@@ -311,35 +491,66 @@ void print_vector(float *v, uint size){
  * @param result
  * @return
  */
-void sparse_matrix_vector_dot(sparse_weight_matrix *M, float *v, uint size_v, float *result, uint size_result) {
+void left_dot( sparse_weight_matrix *M, float *v, uint size_v, float *result, uint size_result) {
 
     int i;
     int j;
     int k;
 
     float w;
-    float res_i;
 
-    check_sparse_matrix_entry_ordering(M);
+    check_sparse_matrix_format(M);
     assert(size_v == M->n_cols);
     assert(size_result == M->n_rows);
 
-    k=0;
-    for(i=0; i<M->n_rows; i++){
-        res_i = 0;
+    for(i=0; i<size_result; i++)
+        result[i] = 0;
 
-        assert(M->rows[k]>=i); // Until now necessarily the row of the next entry is larger than the current row
-        while(M->rows[k] == i){
+    for(k=0; k<M->number_of_entries; k++){
+        i = M->rows[k];
+        j = M->cols[k];
+        w = get_weight_by_entry(M,k);
 
-            j = M->cols[k];
-            w = get_weight_by_entry(M,k);
-            res_i += w * v[j];
+        if(v[j] != 0)
+            result[i] += w * v[j];
+    }
+}
 
-            k++;
-        }
 
-        result[i] = res_i;
+/**
+ * The sparse matrix vector right-dot is done as follows:
+ * - For each row,
+ *      Check the entries in the matrix that are contained in that row.
+ *      Multiply them with the corresponding vector entry
+ *      Add the results
+ *
+ * @param M
+ * @param v
+ * @param result
+ * @return
+ */
+void right_dot(float *v, uint size_v, sparse_weight_matrix *M, float *result, uint size_result) {
 
+    int i;
+    int j;
+    int k;
+
+    float w;
+
+    check_sparse_matrix_format(M);
+    assert(size_v == M->n_rows);
+    assert(size_result == M->n_cols);
+
+    for(j=0; j<size_result; j++)
+        result[j] = 0;
+
+    for(k=0; k<M->number_of_entries; k++){
+        i = M->rows[k];
+        j = M->cols[k];
+        w = get_weight_by_entry(M,k);
+
+        if(v[i] != 0)
+            result[j] += w * v[i];
     }
 }
 
@@ -347,7 +558,7 @@ void sparse_matrix_vector_dot(sparse_weight_matrix *M, float *v, uint size_v, fl
  * Check that the index of a matrix are well ordered.
  * @param M
  */
-void check_sparse_matrix_entry_ordering(sparse_weight_matrix *M){
+void check_sparse_matrix_format(sparse_weight_matrix *M){
     int k;
     int last_i;
     int last_j;
@@ -364,6 +575,8 @@ void check_sparse_matrix_entry_ordering(sparse_weight_matrix *M){
         last_i = M->rows[k];
         last_j = M->cols[k];
 
+        assert(M->thetas > 0); //Thetas has to be positive if we do not simulate disconnected synapses
+
     }
 
 }
@@ -371,23 +584,69 @@ void check_sparse_matrix_entry_ordering(sparse_weight_matrix *M){
 /**
  * Compute the gradient with respect to a non-zero synaptic parameter theta.
  * @param weight_matrix
- * @param pre_synaptic_activation
+ * @param pre_synaptic_activity
  * @param post_synaptic_error_msg
  * @param entry_idx
  * @return
  */
-float gradient_wrt_theta_entry(sparse_weight_matrix *weight_matrix, float *pre_synaptic_activation, float *post_synaptic_error_msg, uint16_t entry_idx){
+float gradient_wrt_theta_entry(sparse_weight_matrix *weight_matrix, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post, uint16_t entry_idx){
 
     bool sign = get_sign(weight_matrix,entry_idx);
     int i = weight_matrix->rows[entry_idx];
     int j = weight_matrix->cols[entry_idx];
-    float value = pre_synaptic_activation[i] * post_synaptic_error_msg[j];
+    float value;
+
+    assert(size_a_pre > i);
+    assert(size_d_post > j);
+
+    if(a_pre[i] != 0 && d_post[j] != 0)
+        value = a_pre[i] * d_post[j];
+    else
+        value = 0;
 
     if(sign)
         return value;
     else
         return - value;
 }
+
+/**
+ * Fill the vector of error message at the pre-synaptic layer with the corresponding values.
+ * @param weight_matrix
+ * @param a_pre
+ * @param size_a_pre
+ * @param delta_post
+ * @param size_d_post
+ * @param delta_pre
+ * @param size_delta_pre
+ */
+void back_prop_error_msg(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post,
+                         uint size_d_post, float *d_pre, uint size_d_pre){
+
+    int i;
+    int j;
+    int k;
+
+    float w;
+
+    check_sparse_matrix_format(W);
+    assert(size_d_post == W->n_cols);
+    assert(size_d_pre == W->n_rows);
+    assert(size_a_pre == W->n_rows);
+
+    for(i=0; i<size_d_pre; i++)
+        d_pre[i] = 0;
+
+    for(k=0; k<W->number_of_entries; k++){
+        i = W->rows[k];
+        j = W->cols[k];
+        w = get_weight_by_entry(W,k);
+
+        if(d_post[j] != 0 && a_pre[i] > 0) // Dot the term-by-term product directly with the derivative of a_pre
+            d_pre[i] += w * d_post[j];
+    }
+}
+
 
 /**
  * Term by term vector multiplication.
@@ -405,7 +664,10 @@ void term_by_term_multiplication(float *a, uint size_a, float *b, uint size_b, f
     assert(size_a == size_result);
 
     for(k=0; k<size_a; k++)
-        result[k] = a[k] * b[k];
+        if(a[k] !=0 && b[k] != 0)
+            result[k] = a[k] * b[k];
+        else
+            result[k] = 0;
 }
 
 /**
@@ -427,7 +689,7 @@ void softmax(float *a, uint size_a, float *result, uint size_result){
         if(a_max<a[k])
             a_max = a[k];
     }
-    
+
     sum=0;
     for(k=0; k<size_a; k++){
         result[k] = exp(a[k] - a_max);
@@ -436,4 +698,53 @@ void softmax(float *a, uint size_a, float *result, uint size_result){
 
     for(k=0; k<size_a; k++)
         result[k] /= sum;
+}
+
+/**
+ *
+ * @param W
+ * @param a_pre
+ * @param size_a_pre
+ * @param d_post
+ * @param size_d_post
+ */
+void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post){
+
+    uint16_t k;
+    float grad;
+    float dtheta;
+
+    for(k=0; k<W->number_of_entries; k++){
+        grad = gradient_wrt_theta_entry(W,a_pre,size_a_pre,d_post,size_d_post,k);
+        dtheta = LEARNING_RATE * ( - L1_COEFF - grad + NOISE_AMPLITUDE * randn_kiss());
+        W->thetas[k] += dtheta;
+
+    }
+
+    k = W->number_of_entries;
+    while(k>0){
+        k -=1;
+
+        if(W->thetas[k] <= 0)
+            delete_entry(W,k);  // Delete the element
+    }
+
+}
+
+
+void turnover(sparse_weight_matrix *W, uint16_t turnover_number){
+    uint k;
+    uint i;
+    uint j;
+    bool sign;
+
+    for(k = 0; k<turnover_number; k++){
+
+        i = trunc(rand_kiss() * W->n_rows);
+        j = trunc(rand_kiss() * W->n_cols);
+        sign = rand_kiss() > 0.5;
+
+        put_new_entry(W,i,j,EPSILON_TURNOVER,sign,false);
+    }
+
 }
