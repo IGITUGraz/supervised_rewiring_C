@@ -1,5 +1,24 @@
 #include "test_network_gradient.h"
 
+#define SET_WEIGHTS(w, n1, n2)                             \
+    sparse_weight_matrix w;                                \
+    set_dimensions(&w,n1,n2);                              \
+    uint16_t rows_of_##w[w.max_entries];                   \
+    uint16_t cols_of_##w[w.max_entries];                   \
+    float_t thetas_of_##w[w.max_entries];                  \
+    uint8_t bit_sign_storage_##w[w.max_entries / 8 +1];    \
+                                                           \
+    w.rows = rows_of_##w;                                  \
+    w.cols = cols_of_##w;                                  \
+    w.thetas = thetas_of_##w;                              \
+    w.bit_sign_storage = bit_sign_storage_##w;             \
+                                                           \
+    set_random_weights_sparse_matrix(&w,sparsity);         \
+                                                           \
+    printf("\n Weight %s: \n", #w);                        \
+    print_sign_and_theta(&w);
+
+
 int test_network() {
 
     uint n_pixel = 3;
@@ -23,59 +42,10 @@ int test_network() {
     float delta_2[n_2];
     float delta_1[n_1];
 
-    // Set weights onto first layer
-    sparse_weight_matrix W_01;
-    set_dimensions(&W_01,n_pixel,n_1);
-    uint16_t rows_of_W_01[W_01.max_entries];
-    uint16_t cols_of_W_01[W_01.max_entries];
-    float_t thetas_of_W_01[W_01.max_entries];
-    uint8_t bit_sign_storage_W_01[W_01.max_entries / 8 +1];
-
-    W_01.rows = rows_of_W_01;
-    W_01.cols = cols_of_W_01;
-    W_01.thetas = thetas_of_W_01;
-    W_01.bit_sign_storage = bit_sign_storage_W_01;
-
-    set_random_weights_sparse_matrix(&W_01,sparsity);
-
-    printf("\n Weight W 01: \n");
-    print_sign_and_theta(&W_01);
-
-    // Set weight onto second hidden layer
-    sparse_weight_matrix W_12;
-    set_dimensions(&W_12,n_1,n_2);
-    uint16_t rows_of_W_12[W_12.max_entries];
-    uint16_t cols_of_W_12[W_12.max_entries];
-    float_t thetas_of_W_12[W_12.max_entries];
-    uint8_t bit_sign_storage_of_W_12[W_12.max_entries / 8 +1];
-
-    W_12.rows = rows_of_W_12;
-    W_12.cols = cols_of_W_12;
-    W_12.thetas = thetas_of_W_12;
-    W_12.bit_sign_storage = bit_sign_storage_of_W_12;
-
-    set_random_weights_sparse_matrix(&W_12,sparsity);
-
-    printf("\n Weight W 12: \n");
-    print_sign_and_theta(&W_12);
-
-    // Set output weights
-    sparse_weight_matrix W_23;
-    set_dimensions(&W_23,n_2,n_class);
-    uint16_t rows_of_W_23[W_23.max_entries];
-    uint16_t cols_of_W_23[W_23.max_entries];
-    float_t thetas_of_W_23[W_23.max_entries];
-    uint8_t bit_sign_storage_of_W_23[W_23.max_entries / 8 +1];
-
-    W_23.rows = rows_of_W_23;
-    W_23.cols = cols_of_W_23;
-    W_23.thetas = thetas_of_W_23;
-    W_23.bit_sign_storage = bit_sign_storage_of_W_23;
-
-    set_random_weights_sparse_matrix(&W_23,sparsity);
-
-    printf("\n Weight W 23: \n");
-    print_sign_and_theta(&W_23);
+    // Set weights
+    SET_WEIGHTS(W_01, n_pixel, n_1);
+    SET_WEIGHTS(W_12, n_1, n_2);
+    SET_WEIGHTS(W_23, n_2, n_class);
 
     // BEGINNING OF ITERATION
 
