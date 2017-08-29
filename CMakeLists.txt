@@ -9,6 +9,6 @@ add_executable(math_in_C ${MATH_TEST_SOURCE_FILES})
 target_link_libraries(math_in_C m)
 
 # main structure
-set(SOURCE_FILES main.c math_operations.c test_math.c test_network_gradient.c)
-add_executable(main ${SOURCE_FILES})
-target_link_libraries(main m)
+set(SOURCE_FILES main_sparseNN_x86.c math_operations.c test_math.c test_network_gradient.c)
+add_executable(sparseNN_x86 ${SOURCE_FILES})
+target_link_libraries(sparseNN_x86 m)
