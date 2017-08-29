@@ -4,10 +4,10 @@
 
 #define LAYER_CNT 4
 
-#define MNIST_TRAIN_IMG_FILE "/home/kelber/projects/phd/graz/datasets/MNIST/train-images-idx3-ubyte"
-#define MNIST_TRAIN_LAB_FILE "/home/kelber/projects/phd/graz/datasets/MNIST/train-labels-idx1-ubyte"
-#define MNIST_TEST_IMG_FILE  "/home/kelber/projects/phd/graz/datasets/MNIST/t10k-images-idx3-ubyte"
-#define MNIST_TEST_LAB_FILE  "/home/kelber/projects/phd/graz/datasets/MNIST/t10k-labels-idx1-ubyte"
+#define MNIST_TRAIN_IMG_FILE "./MNIST/train-images-idx3-ubyte"
+#define MNIST_TRAIN_LAB_FILE "./MNIST/train-labels-idx1-ubyte"
+#define MNIST_TEST_IMG_FILE  "./MNIST/t10k-images-idx3-ubyte"
+#define MNIST_TEST_LAB_FILE  "./MNIST/t10k-labels-idx1-ubyte"
 #define NUM_TRAIN_EX            60000
 #define TRAIN_IMAGEF_BUFF    47040016
 #define TRAIN_LABELF_BUFF       60008
