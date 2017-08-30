@@ -280,7 +280,8 @@ bool get_sign(sparse_weight_matrix *M, uint16_t entry_idx) {
  * @param val
  */
 void set_sign(sparse_weight_matrix *M, uint16_t entry_idx, bool val) {
-    M->bit_sign_storage[entry_idx/8] |= (val ? 1 : 0) << (entry_idx%8);
+    if(val) M->bit_sign_storage[entry_idx/8] |= 1 << (entry_idx%8);
+    else M->bit_sign_storage[entry_idx/8] &= ~(1 << (entry_idx%8));
 }
 
 /**
