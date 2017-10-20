@@ -12,3 +12,9 @@ target_link_libraries(math_in_C m)
 set(SOURCE_FILES main_sparseNN_x86.c math_operations.c test_math.c test_network_gradient.c)
 add_executable(sparseNN_x86 ${SOURCE_FILES})
 target_link_libraries(sparseNN_x86 m)
+
+#test import MNIST dataset
+set(MNIST_SOURCE_FILES test_load_mnist.c)
+add_executable(test_load_mnist ${MNIST_SOURCE_FILES})
+target_link_libraries(test_load_mnist m)
+
