@@ -81,11 +81,11 @@ float randn_kiss( )
  * Fill-in a sparse matrix with random value.
  * It uses a Xavier initialization of the form: mask * randn(n_in,n_out)/n_in,
  * if randn generates gaussian number, n_in is the number of inputs, n_out is the number of outputs.
- * The mask allows non zero values at each position with probability "sparsity": mask = rand(n_in,n_out) < sparsity
+ * The mask allows non zero values at each position with probability "connectivity": mask = rand(n_in,n_out) < connectivity
  * @param M
- * @param sparsity
+ * @param connectivity
  */
-void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity) {
+void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivity) {
 
     int k;
     int i;
@@ -96,7 +96,7 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float sparsity) {
     for(i = 0; i < M->n_rows; i += 1){
         for(j = 0; j < M->n_cols; j += 1) {
 
-            if(rand_kiss() < sparsity) {
+            if(rand_kiss() < connectivity) {
                 value = randn_kiss() / sqrt(M->n_rows);
 
                 M->rows[k] = i;
@@ -740,13 +740,13 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 }
 
 
-void turnover(sparse_weight_matrix *W, uint16_t turnover_number){
+void rewiring(sparse_weight_matrix *W, uint16_t rewiring_number){
     uint k;
     uint i;
     uint j;
     bool sign;
 
-    for(k = 0; k<turnover_number; k++){
+    for(k = 0; k<rewiring_number; k++){
 
         i = trunc(rand_kiss() * W->n_rows);
         j = trunc(rand_kiss() * W->n_cols);
@@ -755,4 +755,26 @@ void turnover(sparse_weight_matrix *W, uint16_t turnover_number){
         put_new_entry(W,i,j,EPSILON_TURNOVER,sign,false);
     }
 
+}
+
+
+
+/**
+ * Argmax function, compute the index of the maximum element in the vector
+ *
+ * @param prob
+ * @param size_prob
+ */
+uint8_t argmax (float *prob, uint8_t size_prob) {
+    uint8_t max_index   = 0;
+    float   max         = *prob;
+
+    for (uint8_t i = 1; i < size_prob ; i++) {
+        if (*(prob+i) > max) {
+            max = *(prob+i);
+            max_index = i;
+        }
+    }
+
+    return max_index;
 }
