@@ -11,6 +11,7 @@
 
 #include "test_network_gradient.h"
 #include "test_math.h"
+#include "train_network.h"
 
 int main (int argc, char **argv) {
 
@@ -18,5 +19,9 @@ int main (int argc, char **argv) {
     if (argc>1 && strcmp(argv[1], "test_math") == 0){
         return test_math();
     }
-    return test_network();
+    else if (argc>1 && strcmp(argv[1], "test_network") == 0){
+        return test_network();
+    }
+    else
+        return train_network();
 }

@@ -4,17 +4,17 @@ project(supervised_rewiring_C)
 set(CMAKE_C_STANDARD 99)
 
 # test structure
-set(MATH_TEST_SOURCE_FILES main_math_test.c math_operations.c test_math.c test_network_gradient.c)
+set(MATH_TEST_SOURCE_FILES main_math_test.c math_operations.c load_mnist.c test_math.c test_network_gradient.c train_network.c )
 add_executable(math_in_C ${MATH_TEST_SOURCE_FILES})
 target_link_libraries(math_in_C m)
 
 # main structure
-set(SOURCE_FILES main_sparseNN_x86.c math_operations.c test_math.c test_network_gradient.c)
-add_executable(sparseNN_x86 ${SOURCE_FILES})
-target_link_libraries(sparseNN_x86 m)
+#set(SOURCE_FILES main_sparseNN_x86.c math_operations.c test_math.c test_network_gradient.c)
+#add_executable(sparseNN_x86 ${SOURCE_FILES})
+#target_link_libraries(sparseNN_x86 m)
 
 #test import MNIST dataset
-set(MNIST_SOURCE_FILES test_load_mnist.c)
+set(MNIST_SOURCE_FILES test_load_mnist.c load_mnist.c)
 add_executable(test_load_mnist ${MNIST_SOURCE_FILES})
 target_link_libraries(test_load_mnist m)
 
