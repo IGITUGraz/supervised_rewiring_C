@@ -98,5 +98,12 @@ int test_math() {
     printf("softmax(a): ");
     print_vector(softmax_result,NELEMS(softmax_result));
 
+
+    printf("\nTest of the argmax:\n");
+    printf("softmax_result: ");
+    print_vector(softmax_result,NELEMS(softmax_result));
+    uint8_t max_index = argmax(softmax_result,NELEMS(softmax_result));
+    printf("argmax(softmax_result): %d\n", max_index);
+
     return 0;
 }

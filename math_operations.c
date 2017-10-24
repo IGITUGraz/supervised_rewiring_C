@@ -30,8 +30,8 @@ uint32_t mars_kiss32( void )
     y ^= ( y << 5 ); y ^= ( y >> 7 ); y ^= ( y << 22 );
     t = z + w + c;
     z = w;
-    c = t < 0;
-    w =  t & 2147483647;
+    c = (t < 0) ? 1 : 0 ;
+    w =  (uint32_t)t & 2147483647;
     x += 1411392427;
 
     return x + y + w;
@@ -42,7 +42,7 @@ uint32_t mars_kiss32( void )
  * @return
  */
 float rand_kiss( void ){
-    return mars_kiss32() / 4294967296.0;
+    return (float)(mars_kiss32() / 4294967296.0);
 }
 
 /**
@@ -87,9 +87,9 @@ float randn_kiss( )
  */
 void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivity) {
 
-    int k;
-    int i;
-    int j;
+    uint16_t k;
+    uint16_t i;
+    uint16_t j;
     float value;
 
     k = 0;
@@ -97,11 +97,11 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivit
         for(j = 0; j < M->n_cols; j += 1) {
 
             if(rand_kiss() < connectivity) {
-                value = randn_kiss() / sqrt(M->n_rows);
+                value =  (randn_kiss() /(float)sqrt(M->n_rows));
 
                 M->rows[k] = i;
                 M->cols[k] = j;
-                M->thetas[k] = fabs(value);
+                M->thetas[k] = fabsf(value);
 
                 if(rand_kiss() > 0.5)
                     set_sign(M,k,true);
@@ -146,10 +146,10 @@ void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float va
 
     // Find the first entry that arrives after the new one.
     k=0;
-    while(M->rows[k] < row)
+    while(M->rows[k] < row && k < M->number_of_entries)
         k++;
 
-    while(M->rows[k] == row && M->cols[k] < col)
+    while(M->rows[k] == row && M->cols[k] < col && k < M->number_of_entries)
         k++;
 
     // Make sure that the entry does not exist already.
@@ -254,10 +254,10 @@ void vector_substraction(float *a, uint size_a, float* b, uint size_b, float *re
  * @param n_rows
  * @param n_cols
  */
-void set_dimensions(sparse_weight_matrix *M, int n_rows, int n_cols) {
+void set_dimensions(sparse_weight_matrix *M, uint16_t n_rows, uint16_t n_cols) {
     M->n_rows = n_rows;
     M->n_cols = n_cols;
-    M->max_entries = ceil(n_rows * n_cols * SPARSITY_LIMIT);
+    M->max_entries = (uint32_t) ceil(n_rows * n_cols * SPARSITY_LIMIT);
 }
 
 /**
@@ -742,15 +742,25 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
 
 void rewiring(sparse_weight_matrix *W, uint16_t rewiring_number){
-    uint k;
-    uint i;
-    uint j;
+    uint16_t k;
+    uint16_t i;
+    uint16_t j;
+    float    r;
     bool sign;
 
     for(k = 0; k<rewiring_number; k++){
 
-        i = trunc(rand_kiss() * W->n_rows);
-        j = trunc(rand_kiss() * W->n_cols);
+        r = rand_kiss();
+        if (r == 1.0)   //very small possibility, may coursed by rounding, but possible
+            i = W->n_rows - (uint16_t)1;
+        else
+            i = (uint16_t)(truncf(r * W->n_rows));
+
+        r = rand_kiss();
+        if (r == 1.0)
+            j = W->n_cols - (uint16_t)1;
+        else
+            j = (uint16_t)(truncf(r * W->n_cols));
         sign = rand_kiss() > 0.5;
 
         put_new_entry(W,i,j,EPSILON_TURNOVER,sign,false);
