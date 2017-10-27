@@ -11,8 +11,8 @@
 
 // a constant definition exported by library:
 #define SPARSITY_LIMIT  .99 // SET to 0.02 to fit on the hardware
-#define LEARNING_RATE 0.5
-#define L1_COEFF 0.00001
+#define LEARNING_RATE 0.05
+#define L1_COEFF 0.0001
 #define NOISE_AMPLITUDE 0.000001
 #define EPSILON_TURNOVER 0.000001
 

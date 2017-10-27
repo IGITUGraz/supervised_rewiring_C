@@ -20,9 +20,10 @@
     printf("\n Weight %s: \n", #w);                          \
     print_sign_and_theta(&w);
 
-#define TRAIN_PERIOD            1000
-#define TEST_PERIOD              500
-#define NUM_EPOCH                  1
+#define NUM_EPOCH                   3
+#define TRAIN_PERIOD             5000
+#define TEST_PERIOD             10000
+
 
 
 int train_network() {
@@ -33,9 +34,9 @@ int train_network() {
     uint16_t n_2 = 100;
     uint16_t n_class = NUM_CLASS;
 
-    float connectivity_01 = 0.1;
-    float connectivity_12 = 0.1;
-    float connectivity_23 = 0.5;
+    float connectivity_01 = 0.01;
+    float connectivity_12 = 0.03;
+    float connectivity_23 = 0.3;
 
     // Allocate the activity are error to be passed around
     float a_1[n_1];
@@ -52,6 +53,7 @@ int train_network() {
 
     time_t rawtime;
     struct tm * timeinfo;
+    clock_t t1, t2, t3, t4, t5;
 
     // Set weights
     SET_WEIGHTS(W_01, n_pixel, n_1, connectivity_01);
@@ -106,23 +108,31 @@ int train_network() {
     float train_label[n_class];         float test_label[n_class];
     uint16_t train_image_num = 0;       uint16_t test_image_num = 0;
 
-    //record training beginning time
+    //record beginning time
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );
-    printf ( "training begins at : %s", asctime (timeinfo) );
+    printf ( "begin at : %s", asctime (timeinfo) );
 
     printf("test report:\n");
-    printf("epoch\t\titeration\t\tsynapses_W01\t\tsynapses_W12\t\tsynapses_W23\t\taccuracy\n");
+    printf("epoch\titeration\tsynapses_W01\tsynapses_W12\tsynapses_W23\taccuracy\tt_iteration\t\tt_get_image\t\tt_forward\tt_backward\tt_rewiring\n");
 
     // BEGIN OF EPOCH
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {
         //BEGIN OF ITERATION
-        //for (train_image_num = 0; train_image_num < NUM_TRAIN; train_image_num++){
-            for (train_image_num = 0; train_image_num < NUM_TRAIN; train_image_num++){
+        for (train_image_num = 0; train_image_num < NUM_TRAIN; train_image_num++){
+            //for (train_image_num = 0; train_image_num < 2; train_image_num++){
 
             //###################### TRAIN PHASE ######################
+            //fetch time
+            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+                t1 = clock();
+
             //get current train image and label
             get_next_image(train_image, train_label, train_image_num, train_images, train_labels);
+
+            //fetch time
+            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+                t2 = clock();
 
             // FORWARD PASS
             right_dot(train_image,NELEMS(train_image),&W_01,a_1,NELEMS(a_1));
@@ -134,6 +144,10 @@ int train_network() {
             right_dot(a_2,NELEMS(a_2),&W_23,y,NELEMS(y));
             softmax(y,NELEMS(y),prob,NELEMS(prob));
 
+            //fetch time
+            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+                t3 = clock();
+
             // BACKWARD PASS
             vector_substraction(prob,NELEMS(prob),train_label,NELEMS(train_label),delta_3,NELEMS(delta_3));
             back_prop_error_msg(&W_23, a_2, NELEMS(a_2), delta_3, NELEMS(delta_3), delta_2, NELEMS(delta_2));
@@ -143,10 +157,17 @@ int train_network() {
             update_weight_matrix(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2));
             update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3));
 
+            //fetch time
+            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+                t4 = clock();
+
             rewiring(&W_01, (uint16_t)(target_01 - W_01.number_of_entries));
             rewiring(&W_12, (uint16_t)(target_12 - W_12.number_of_entries));
             rewiring(&W_23, (uint16_t)(target_23 - W_23.number_of_entries));
 
+            //fetch time
+            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+                t5 = clock();
 
             //###################### TEST PHASE ########################
             //compute one accuracy every 1k training
@@ -175,13 +196,26 @@ int train_network() {
                 accuracy    = (float)scoreboard / TEST_PERIOD;
 
                 //show test result
-                printf("%1d\t\t%5d\t\t\t\t%d\t\t\t\t%d\t\t\t\t%d\t\t\t\t%.3f\n", epoch, train_image_num, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, accuracy);
+                printf("\t%1d\t\t%5d\t\t\t%d\t\t\t%d\t\t\t\t%d\t\t%.3f\t\t\t%.5f\t\t\t%2.2f%%\t\t%2.2f%%\t\t%2.2f%%\t\t%2.2f%%\n",                   \
+                        epoch, train_image_num, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, accuracy,                    \
+                       (t5-t1)/(float)CLOCKS_PER_SEC,(t2-t1)*100./(t5-t1),(t3-t2)*100./(t5-t1),(t4-t3)*100./(t5-t1),(t5-t4)*100.0/(t5-t1));
 
-                //TODO save file
-            }
+                //TODO save file, or use > math_in_C | tee outfile
+            }//END OF TEST PHASE
         }//END OF ITERATION
         train_image_num = 0;
     }//END OF EPOCH
+
+    //release memory
+    free(train_images);
+    free(train_labels);
+    free(test_images);
+    free(test_labels);
+
+    //record end time
+    time ( &rawtime );
+    timeinfo = localtime ( &rawtime );
+    printf ( "end at : %s", asctime (timeinfo) );
 
     return 0;
 }
