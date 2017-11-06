@@ -11,7 +11,7 @@
 
 // a constant definition exported by library:
 #define SPARSITY_LIMIT  .99 // SET to 0.02 to fit on the hardware
-#define LEARNING_RATE 0.05
+//#define LEARNING_RATE 0.005
 #define L1_COEFF 0.0001
 #define NOISE_AMPLITUDE 0.000001
 #define EPSILON_TURNOVER 0.000001
@@ -717,7 +717,7 @@ void softmax(float *a, uint size_a, float *result, uint size_result){
  * @param d_post
  * @param size_d_post
  */
-void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post){
+void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post, float learning_rate){
 
     uint16_t k;
     float grad;
@@ -725,7 +725,7 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
     for(k=0; k<W->number_of_entries; k++){
         grad = gradient_wrt_theta_entry(W,a_pre,size_a_pre,d_post,size_d_post,k);
-        dtheta = LEARNING_RATE * ( - L1_COEFF - grad + NOISE_AMPLITUDE * randn_kiss());
+        dtheta = learning_rate * ( - L1_COEFF - grad + NOISE_AMPLITUDE * randn_kiss());
         W->thetas[k] += dtheta;
 
     }

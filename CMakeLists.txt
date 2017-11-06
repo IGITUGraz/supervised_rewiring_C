@@ -3,21 +3,17 @@ project(supervised_rewiring_C)
 
 set(CMAKE_C_STANDARD 99)
 
-# test structure
+# test main in C
 set(MATH_TEST_SOURCE_FILES main_math_test.c math_operations.c test_math.c test_network_gradient.c )
 add_executable(math_in_C ${MATH_TEST_SOURCE_FILES})
 target_link_libraries(math_in_C m)
 
 # test train network
 set(TRAIN_SOURCE_FILES main_train_network.c math_operations.c load_mnist.c train_network.c )
-#SET(GCC_COVERAGE_COMPILE_FLAGS "-pg")
-#SET(GCC_COVERAGE_LINK_FLAGS    "-pg")
-#SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
-#SET( CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} ${GCC_COVERAGE_LINK_FLAGS}" )
 add_executable(train_network ${TRAIN_SOURCE_FILES})
 target_link_libraries(train_network m)
 
-# main structure
+# test sparseNN_X86
 #set(SOURCE_FILES main_sparseNN_x86.c math_operations.c test_math.c test_network_gradient.c)
 #add_executable(sparseNN_x86 ${SOURCE_FILES})
 #target_link_libraries(sparseNN_x86 m)

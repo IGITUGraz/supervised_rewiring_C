@@ -68,7 +68,7 @@
     void back_prop_error_msg(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post,
                              uint size_d_post, float *d_pre, uint size_d_pre);
     float gradient_wrt_theta_entry(sparse_weight_matrix *weight_matrix, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post, uint16_t entry_idx);
-    void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post);
+    void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post, float learning_rate);
     void rewiring(sparse_weight_matrix *W, uint16_t rewiring_number);
 
     void softmax(float *a, uint size_a, float *result, uint size_result);

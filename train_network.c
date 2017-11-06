@@ -20,14 +20,12 @@
     printf("\n Weight %s: \n", #w);                          \
     print_sign_and_theta(&w);
 
-#define NUM_EPOCH                   3
-#define TRAIN_PERIOD             5000
-#define TEST_PERIOD             10000
-
-
+#define NUM_EPOCH                     10
+#define TRAIN_PERIOD               10000
+#define TEST_PERIOD                10000
+#define FINAL_LEARNING_RATE        0.005
 
 int train_network() {
-
     //define network parameter
     uint16_t n_pixel = IMAGE_SIZE;
     uint16_t n_1 = 300;
@@ -48,12 +46,14 @@ int train_network() {
     float delta_2[n_2];
     float delta_1[n_1];
 
-    uint scoreboard;
+    uint  scoreboard;
     float accuracy;
+
+    float learning_rate = 0.05;
 
     time_t rawtime;
     struct tm * timeinfo;
-    clock_t t1, t2, t3, t4, t5;
+    clock_t t_end, t1, t2, t3, t4, t5;
 
     // Set weights
     SET_WEIGHTS(W_01, n_pixel, n_1, connectivity_01);
@@ -153,9 +153,9 @@ int train_network() {
             back_prop_error_msg(&W_23, a_2, NELEMS(a_2), delta_3, NELEMS(delta_3), delta_2, NELEMS(delta_2));
             back_prop_error_msg(&W_12, a_1, NELEMS(a_1), delta_2, NELEMS(delta_2), delta_1, NELEMS(delta_1));
 
-            update_weight_matrix(&W_01,train_image,NELEMS(train_image),delta_1,NELEMS(delta_1));
-            update_weight_matrix(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2));
-            update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3));
+            update_weight_matrix(&W_01,train_image,NELEMS(train_image),delta_1,NELEMS(delta_1), learning_rate);
+            update_weight_matrix(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2), learning_rate);
+            update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3), learning_rate);
 
             //fetch time
             if ((train_image_num + 1) % TRAIN_PERIOD == 0)
@@ -200,10 +200,21 @@ int train_network() {
                         epoch, train_image_num, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, accuracy,                    \
                        (t5-t1)/(float)CLOCKS_PER_SEC,(t2-t1)*100./(t5-t1),(t3-t2)*100./(t5-t1),(t4-t3)*100./(t5-t1),(t5-t4)*100.0/(t5-t1));
 
-                //TODO save file, or use > math_in_C | tee outfile
+                //TODO save file, or use > train_network | tee outfile
+
             }//END OF TEST PHASE
         }//END OF ITERATION
         train_image_num = 0;
+
+        if (epoch > 0 && epoch % 2 == 0) {
+            learning_rate   /= 2;
+            printf("learning rate -> %f\n", learning_rate);
+        }
+
+
+        if (learning_rate < FINAL_LEARNING_RATE)
+            break;
+
     }//END OF EPOCH
 
     //release memory
@@ -216,6 +227,9 @@ int train_network() {
     time ( &rawtime );
     timeinfo = localtime ( &rawtime );
     printf ( "end at : %s", asctime (timeinfo) );
+
+    t_end = clock();
+    printf("The program runs for %.1f s\n",(float)(t_end/CLOCKS_PER_SEC));
 
     return 0;
 }
