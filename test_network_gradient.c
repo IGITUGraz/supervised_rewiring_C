@@ -13,9 +13,10 @@
     w.cols = cols_of_##w;                                  \
     w.thetas = thetas_of_##w;                              \
     w.bit_sign_storage = bit_sign_storage_##w;             \
+    w.max_entries = ceil(n1*n2*connectivity);              \
                                                            \
     set_random_weights_sparse_matrix(&w,connectivity);     \
-                                                           \
+    w.max_entries = w.number_of_entries;                   \
     printf("\n Weight %s: \n", #w);                        \
     print_sign_and_theta(&w);
 
@@ -31,6 +32,7 @@ int test_network() {
     float connectivity_23 = 0.5;
 
     uint n_class = 3;
+    float learning_rate = 0.05;
 
     // Allocate the activity are error to be passed around
     float a_1[n_1];
@@ -126,16 +128,15 @@ int test_network() {
         printf("  %u, %u -> %.2g \n",W_12.rows[k],W_12.cols[k],gradient_wrt_theta_entry(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2),k));
     }
 
-
     printf("\nGradients wrt to W_23:\n");
     for(k=0; k<W_23.number_of_entries; k++){
         printf("  %u, %u -> %.2g \n",W_23.rows[k],W_23.cols[k],gradient_wrt_theta_entry(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3),k));
     }
 
 
-    update_weight_matrix(&W_01,I,NELEMS(I),delta_1,NELEMS(delta_1));
-    update_weight_matrix(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2));
-    update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3));
+    update_weight_matrix(&W_01,I,NELEMS(I),delta_1,NELEMS(delta_1), learning_rate);
+    update_weight_matrix(&W_12,a_1,NELEMS(a_1),delta_2,NELEMS(delta_2), learning_rate);
+    update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3), learning_rate);
 
     printf("\nAFTER UPDATE:\n");
     printf("\nW_01:\n");

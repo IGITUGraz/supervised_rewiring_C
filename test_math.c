@@ -98,12 +98,30 @@ int test_math() {
     printf("softmax(a): ");
     print_vector(softmax_result,NELEMS(softmax_result));
 
-
     printf("\nTest of the argmax:\n");
     printf("softmax_result: ");
     print_vector(softmax_result,NELEMS(softmax_result));
     uint8_t max_index = argmax(softmax_result,NELEMS(softmax_result));
     printf("argmax(softmax_result): %d\n", max_index);
+
+    printf("\nTest put random entries (we add a couple of entries for to try complex cases)\n");
+    put_new_entry(&M,0,3,0.1,true,true);
+    put_new_entry(&M,1,0,-0.1,true,true);
+    put_new_entry(&M,0,0,9,false,true);
+    put_new_entry(&M,2,2,9,false,true);
+    put_new_entry(&M,2,3,9,false,true);
+    printf("Old matrix: \n");
+    print_weight_matrix(&M);
+    printf("New matrix with k new zeros: \n");
+    put_new_random_entries(&M,1);
+    print_weight_matrix(&M);
+
+    printf("\nTest delete random entries (Should delete the zeros... )\n");
+    delete_negative_entries(&M);
+    print_weight_matrix(&M);
+
+
+
 
     return 0;
 }

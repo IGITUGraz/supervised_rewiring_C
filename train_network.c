@@ -21,8 +21,9 @@
     print_sign_and_theta(&w);
 
 #define NUM_EPOCH                     10
-#define TRAIN_PERIOD               10000
-#define TEST_PERIOD                10000
+#define REWIRING_PERIOD               20
+#define REPORT_ACC_PERIOD               10000
+#define N_TEST_IMAGES                10000
 #define FINAL_LEARNING_RATE        0.005
 
 int train_network() {
@@ -114,7 +115,7 @@ int train_network() {
     printf ( "begin at : %s", asctime (timeinfo) );
 
     printf("test report:\n");
-    printf("epoch\titeration\tsynapses_W01\tsynapses_W12\tsynapses_W23\taccuracy\tt_iteration\t\tt_get_image\t\tt_forward\tt_backward\tt_rewiring\n");
+    printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi \n");
 
     // BEGIN OF EPOCH
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {
@@ -124,14 +125,14 @@ int train_network() {
 
             //###################### TRAIN PHASE ######################
             //fetch time
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
                 t1 = clock();
 
             //get current train image and label
             get_next_image(train_image, train_label, train_image_num, train_images, train_labels);
 
             //fetch time
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
                 t2 = clock();
 
             // FORWARD PASS
@@ -145,7 +146,7 @@ int train_network() {
             softmax(y,NELEMS(y),prob,NELEMS(prob));
 
             //fetch time
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
                 t3 = clock();
 
             // BACKWARD PASS
@@ -158,22 +159,26 @@ int train_network() {
             update_weight_matrix(&W_23,a_2,NELEMS(a_2),delta_3,NELEMS(delta_3), learning_rate);
 
             //fetch time
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
                 t4 = clock();
 
-            rewiring(&W_01, (uint16_t)(target_01 - W_01.number_of_entries));
-            rewiring(&W_12, (uint16_t)(target_12 - W_12.number_of_entries));
-            rewiring(&W_23, (uint16_t)(target_23 - W_23.number_of_entries));
+            if ((train_image_num+1) % REWIRING_PERIOD == 0){
+
+                rewiring(&W_01,(uint16_t)(target_01 - W_01.number_of_entries));
+                rewiring(&W_12,(uint16_t)(target_12 - W_12.number_of_entries));
+                rewiring(&W_23,(uint16_t)(target_23 - W_23.number_of_entries));
+
+            }
 
             //fetch time
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0)
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
                 t5 = clock();
 
             //###################### TEST PHASE ########################
             //compute one accuracy every 1k training
-            if ((train_image_num + 1) % TRAIN_PERIOD == 0){
+            if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0){
                 scoreboard  = 0;
-                for (uint16_t test_loop = 0; test_loop < TEST_PERIOD; test_loop++){
+                for (uint16_t test_loop = 0; test_loop < N_TEST_IMAGES; test_loop++){
                     //get current test image and label
                     get_next_image(test_image, test_label, test_image_num + test_loop, test_images, test_labels);
 
@@ -187,16 +192,16 @@ int train_network() {
                     right_dot(a_2,NELEMS(a_2),&W_23,y,NELEMS(y));
                     softmax(y,NELEMS(y),prob,NELEMS(prob));
 
-                    scoreboard   = scoreboard + (uint)(argmax(prob, NELEMS(prob)) == argmax(test_label,NELEMS(test_label)));
+                    scoreboard += (uint)(argmax(prob, NELEMS(prob)) == argmax(test_label,NELEMS(test_label)));
                 }
-                if(test_image_num + TEST_PERIOD == NUM_TEST) //update test_image_num
+                if(test_image_num + N_TEST_IMAGES == NUM_TEST) //update test_image_num
                     test_image_num = 0;
                 else
-                    test_image_num += TEST_PERIOD;
-                accuracy    = (float)scoreboard / TEST_PERIOD;
+                    test_image_num += N_TEST_IMAGES;
+                accuracy    = (float)scoreboard / N_TEST_IMAGES;
 
                 //show test result
-                printf("\t%1d\t\t%5d\t\t\t%d\t\t\t%d\t\t\t\t%d\t\t%.3f\t\t\t%.5f\t\t\t%2.2f%%\t\t%2.2f%%\t\t%2.2f%%\t\t%2.2f%%\n",                   \
+                printf("%1d \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",                   \
                         epoch, train_image_num, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, accuracy,                    \
                        (t5-t1)/(float)CLOCKS_PER_SEC,(t2-t1)*100./(t5-t1),(t3-t2)*100./(t5-t1),(t4-t3)*100./(t5-t1),(t5-t4)*100.0/(t5-t1));
 
