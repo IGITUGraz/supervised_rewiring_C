@@ -157,9 +157,9 @@ int test_network() {
     delete_entry(&W_23,1);
     delete_entry(&W_23,2);
 
-    rewiring(&W_01,2);
-    rewiring(&W_12,2);
-    rewiring(&W_23,2);
+    rewiring(&W_01);
+    rewiring(&W_12);
+    rewiring(&W_23);
 
     printf("\nAFTER TURNOVER:\n");
 

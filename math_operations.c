@@ -515,6 +515,7 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     uint16_t old_n_entries = M->number_of_entries;
     M->number_of_entries = old_n_entries + n_new;
 
+
     uint16_t k;
 
     // tmp variables necessary to generate the new positions
@@ -1133,9 +1134,9 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
 }
 
-void rewiring(sparse_weight_matrix *W, uint16_t rewiring_number) {
+void rewiring(sparse_weight_matrix *W) {
     delete_negative_entries(W);
-    put_new_random_entries(W, rewiring_number);
+    put_new_random_entries(W,W->max_entries - W->number_of_entries);
 }
 
 /**

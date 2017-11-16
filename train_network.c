@@ -17,7 +17,7 @@
                                                              \
     set_random_weights_sparse_matrix(&(w),connectivity);
 
-#define NUM_EPOCH                   1
+#define NUM_EPOCH                   10
 #define REWIRING_PERIOD             10
 #define REPORT_ACC_PERIOD           10000
 #define N_TEST_IMAGES               10000
@@ -54,15 +54,11 @@ int train_network() {
     clock_t t_end, t1, t2, t3, t4, t5;
 
     // Set weights
-    printf("n1 %d n2 %d class %d \n",n_1,n_2,n_class);
+    printf("Network Structure: n1 %d n2 %d class %d \n",n_1,n_2,n_class);
 
     SET_WEIGHTS(W_01, n_pixel, n_1, connectivity_01);
     SET_WEIGHTS(W_12, n_1, n_2, connectivity_12);
     SET_WEIGHTS(W_23, n_2, n_class, connectivity_23);
-
-    const uint32_t target_01  = W_01.max_entries;
-    const uint32_t target_12  = W_12.max_entries;
-    const uint32_t target_23  = W_23.max_entries;
 
     //import data set
     //                      TRAIN_SET                                                              TEST_SET
@@ -115,6 +111,9 @@ int train_network() {
 
     printf("test report:\n");
     printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi \n");
+    printf("%1d \t %d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",
+                        0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, 0,
+                       0,0,0,0,0);
 
     // BEGIN OF EPOCH
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {
@@ -163,9 +162,9 @@ int train_network() {
 
             if ((train_image_num+1) % REWIRING_PERIOD == 0){
 
-                rewiring(&W_01,(uint16_t)(target_01 - W_01.number_of_entries));
-                rewiring(&W_12,(uint16_t)(target_12 - W_12.number_of_entries));
-                rewiring(&W_23,(uint16_t)(target_23 - W_23.number_of_entries));
+                rewiring(&W_01);
+                rewiring(&W_12);
+                rewiring(&W_23);
 
             }
 
