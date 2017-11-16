@@ -111,7 +111,7 @@ int train_network() {
 
     printf("test report:\n");
     printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi \n");
-    printf("%1d \t %d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",
+    printf("%1d \t \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",
                         0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, 0,
                        0,0,0,0,0);
 
@@ -199,7 +199,7 @@ int train_network() {
                 accuracy    = (float)scoreboard / N_TEST_IMAGES;
 
                 //show test result
-                printf("%1d \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",                   \
+                printf("%1d \t \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.1f%% \t\t %2.1f%%\n",                   \
                         epoch, train_image_num, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, accuracy,                    \
                        (t5-t1)/(float)CLOCKS_PER_SEC,(t2-t1)*100./(t5-t1),(t3-t2)*100./(t5-t1),(t4-t3)*100./(t5-t1),(t5-t4)*100.0/(t5-t1));
 
