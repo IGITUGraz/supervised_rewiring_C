@@ -1,8 +1,21 @@
 cmake-build-debug/
+CMakeFiles/
+Makefile
+MNIST/
+cmake_install.cmake
+
+test_gradient
+test_math
+test_load_mnist
+train_network
+
+*.cbp
 
 .idea/
 .vimsessions/
 .tags
 
 *.swp
+
+
 

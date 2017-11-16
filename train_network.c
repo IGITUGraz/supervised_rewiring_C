@@ -18,7 +18,7 @@
     set_random_weights_sparse_matrix(&(w),connectivity);
 
 #define NUM_EPOCH                   1
-#define REWIRING_PERIOD             20
+#define REWIRING_PERIOD             10
 #define REPORT_ACC_PERIOD           10000
 #define N_TEST_IMAGES               10000
 #define FINAL_LEARNING_RATE         0.005

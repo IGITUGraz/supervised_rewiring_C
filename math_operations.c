@@ -507,7 +507,7 @@ void slide_or_ignore_all_doubles(sparse_weight_matrix *M, uint16_t from_k) {
 
 
 void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
-    
+
     if (n_new == 0) {
         return;
     }
