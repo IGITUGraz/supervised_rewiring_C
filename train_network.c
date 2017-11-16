@@ -3,39 +3,36 @@
 
 #define SET_WEIGHTS(w, n1, n2, connectivity)                 \
     sparse_weight_matrix w;                                  \
-    set_dimensions(&(w),n1,n2);                              \
+    set_dimensions(&(w),n1,n2,connectivity);                 \
                                                              \
     uint16_t rows_of_##w[(w).max_entries];                   \
     uint16_t cols_of_##w[(w).max_entries];                   \
     float_t thetas_of_##w[(w).max_entries];                  \
-    uint8_t bit_sign_storage_##w[(w).max_entries / 8 +1];    \
+    uint8_t bit_sign_storage_##w[(w).max_entries / 8 +1];\
                                                              \
     (w).rows = rows_of_##w;                                  \
     (w).cols = cols_of_##w;                                  \
     (w).thetas = thetas_of_##w;                              \
     (w).bit_sign_storage = bit_sign_storage_##w;             \
                                                              \
-    set_random_weights_sparse_matrix(&(w),connectivity);     //\
-                                                             \
-    printf("\n Weight %s: \n", #w);                          \
-    print_sign_and_theta(&w);
+    set_random_weights_sparse_matrix(&(w),connectivity);
 
-#define NUM_EPOCH                     10
-#define REWIRING_PERIOD               20
-#define REPORT_ACC_PERIOD               10000
-#define N_TEST_IMAGES                10000
-#define FINAL_LEARNING_RATE        0.005
+#define NUM_EPOCH                   1
+#define REWIRING_PERIOD             20
+#define REPORT_ACC_PERIOD           10000
+#define N_TEST_IMAGES               10000
+#define FINAL_LEARNING_RATE         0.005
 
 int train_network() {
     //define network parameter
-    uint16_t n_pixel = IMAGE_SIZE;
-    uint16_t n_1 = 300;
-    uint16_t n_2 = 100;
-    uint16_t n_class = NUM_CLASS;
+    const uint16_t n_pixel = IMAGE_SIZE;
+    const uint16_t n_1 = 300;
+    const uint16_t n_2 = 100;
+    const uint16_t n_class = NUM_CLASS;
 
-    float connectivity_01 = 0.01;
-    float connectivity_12 = 0.03;
-    float connectivity_23 = 0.3;
+    const float connectivity_01 = 0.01;
+    const float connectivity_12 = 0.03;
+    const float connectivity_23 = 0.30;
 
     // Allocate the activity are error to be passed around
     float a_1[n_1];
@@ -57,13 +54,15 @@ int train_network() {
     clock_t t_end, t1, t2, t3, t4, t5;
 
     // Set weights
+    printf("n1 %d n2 %d class %d \n",n_1,n_2,n_class);
+
     SET_WEIGHTS(W_01, n_pixel, n_1, connectivity_01);
     SET_WEIGHTS(W_12, n_1, n_2, connectivity_12);
     SET_WEIGHTS(W_23, n_2, n_class, connectivity_23);
 
-    const uint32_t target_01  = W_01.number_of_entries;
-    const uint32_t target_12  = W_12.number_of_entries;
-    const uint32_t target_23  = W_23.number_of_entries;
+    const uint32_t target_01  = W_01.max_entries;
+    const uint32_t target_12  = W_12.max_entries;
+    const uint32_t target_23  = W_23.max_entries;
 
     //import data set
     //                      TRAIN_SET                                                              TEST_SET

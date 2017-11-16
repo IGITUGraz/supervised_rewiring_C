@@ -1,5 +1,6 @@
 #include <jmorecfg.h>
 #include "math_operations.h"
+#include <time.h>
 
 /***
  * Library of math opeartions required to implement backprop in feedforward relu units with rewiring.
@@ -69,7 +70,6 @@ float randn_kiss() {
 
     if (!set) {
         do {
-
             v1 = (mars_kiss32() / 2147483648.0f) - 1.0f;   // U(0,1) * 2 - 1
             v2 = (mars_kiss32() / 2147483648.0f) - 1.0f;
             rsq = v1 * v1 + v2 * v2;
@@ -80,52 +80,12 @@ float randn_kiss() {
         set = true;
         return (float) v2 * fac;
     } else {
-
         set = false;
         return (float) gset;
 
     }
 }
 
-/**
- * Fill-in a sparse matrix with random value.
- * It uses a Xavier initialization of the form: mask * randn(n_in,n_out)/n_in,
- * if randn generates gaussian number, n_in is the number of inputs, n_out is the number of outputs.
- * The mask allows non zero values at each position with probability "connectivity": mask = rand(n_in,n_out) < connectivity
- * @param M
- * @param connectivity
- */
-void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivity) {
-
-    uint32_t k;
-    uint32_t i;
-    uint32_t j;
-    float value;
-
-    k = 0;
-    for (i = 0; i < M->n_rows; i += 1) {
-        for (j = 0; j < M->n_cols; j += 1) {
-
-            if (rand_kiss() < connectivity && k<M->max_entries) {
-                value = (randn_kiss() / (float) sqrt(M->n_rows));
-
-                M->rows[k] = i;
-                M->cols[k] = j;
-                M->thetas[k] = fabsf(value);
-
-                if (rand_kiss() > 0.5)
-                    set_sign(M, k, true);
-                else
-                    set_sign(M, k, false);
-
-                k += 1;
-                assert(k <= M->max_entries);
-            }
-        }
-    }
-
-    M->number_of_entries = k;
-}
 
 /**
  * Compute the rectified linear function of v in place.
@@ -141,6 +101,44 @@ void relu_in_place(float *v, uint size_v) {
     }
 }
 
+
+/**
+ * Print a weight matrix in the python matrix format.
+ * @param v
+ * @param size
+ */
+void print_weight_matrix(sparse_weight_matrix *M) {
+
+    int i;
+    int j;
+    int entry;
+
+    check_sparse_matrix_format(M);
+
+    printf("[");
+    for (i = 0; i < M->n_rows; i += 1) {
+        if (i > 0)
+            printf("\n ");
+
+        printf("[");
+        for (j = 0; j < M->n_cols; j += 1) {
+            entry = is_entry_and_fetch(M, i, j);
+            if (entry == -1)
+                printf("_");
+            else
+                printf("%.2g", get_weight_by_entry(M, entry));
+            if (j < M->n_cols - 1)
+                printf(", ");
+
+        }
+        printf("]");
+        if (i < M->n_rows - 1)
+            printf(", ");
+    }
+    printf("] \n");
+}
+
+
 /**
  *  Add an entry in the matrix in a free slot.
  *  This is not trivial because the order in the sparse matrix need to be respected.
@@ -151,17 +149,17 @@ void relu_in_place(float *v, uint size_v) {
  * @param value
  * @param sign
  */
-void put_new_entry(sparse_weight_matrix *M, uint32_t row, uint32_t col, float value, bool sign, bool fail_if_exist) {
+void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float value, bool sign, bool fail_if_exist) {
 
-    uint32_t k;
+    uint16_t k;
 
-    uint32_t pushed_row = row;
-    uint32_t pushed_col = col;
+    uint16_t pushed_row = row;
+    uint16_t pushed_col = col;
     float pushed_theta = value;
     bool pushed_sign = sign;
 
-    uint32_t replaced_row;
-    uint32_t replaced_col;
+    uint16_t replaced_row;
+    uint16_t replaced_col;
     float replaced_theta;
     bool replaced_sign;
 
@@ -218,19 +216,87 @@ void put_new_entry(sparse_weight_matrix *M, uint32_t row, uint32_t col, float va
 
 
 uint32_t coord_to_position(sparse_weight_matrix *M, uint32_t row, uint32_t col) {
-    return row * M->n_cols + col;
+    uint32_t n_col = M->n_cols;
+    return row * n_col + col;
 }
 
-uint32_t get_flattened_position(sparse_weight_matrix *M, uint32_t entry) {
-    return M->rows[entry] * M->n_cols + M->cols[entry];
+uint32_t get_flattened_position(sparse_weight_matrix *M, uint16_t entry) {
+    uint32_t row = M->rows[entry];
+    uint32_t n_col = M->n_cols;
+    uint32_t col = M->cols[entry];
+    return row * n_col + col;
 }
 
-uint32_t get_row_from_position(sparse_weight_matrix *M, uint32_t position) {
+uint16_t get_row_from_position(sparse_weight_matrix *M, uint32_t position) {
     return position / M->n_cols;
 }
 
-uint32_t get_col_from_position(sparse_weight_matrix *M, uint32_t position) {
+uint16_t get_col_from_position(sparse_weight_matrix *M, uint32_t position) {
     return position % M->n_cols;
+}
+
+/**
+ * Print a weight matrix in the python matrix format.
+ * @param v
+ * @param size
+ */
+void print_weight_matrix_containers(sparse_weight_matrix *M, bool print_non_assigned) {
+
+    int entry;
+
+    check_sparse_matrix_format(M);
+
+    for (entry = 0; entry < M->max_entries; entry++) {
+        if (entry == M->number_of_entries) {
+            if (print_non_assigned) {
+                printf("--\n");
+            } else {
+                break;
+            }
+        }
+        printf("(%d,%d)->%d \t th: %.2f sign: %d \n", M->rows[entry], M->cols[entry], get_flattened_position(M, entry),
+               M->thetas[entry], get_sign(M, entry));
+    }
+}
+
+/**
+ * Raise an error if the element are not sorted from entry_low to entry_high-1 (included)
+ * @param M
+ * @param entry_low
+ * @param entry_high
+ */
+void check_order(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high) {
+
+    if (SKIP_CHECK) {
+        return;
+    }
+
+    uint16_t k;
+    uint32_t last_pos = -1;
+    for (k = entry_low; k < entry_high; k++) {
+        if (k > entry_low && get_flattened_position(M, k) <= last_pos) {
+            printf("k-1: %d(%d,%d) \t k: %d:(%d,%d) \t k+1: %d(%d,%d)",
+                   k - 1, M->rows[k - 1], M->cols[k - 1],
+                   k, M->rows[k], M->cols[k],
+                   k + 1, M->rows[k + 1], M->cols[k + 1]);
+            assert(get_flattened_position(M, k) > last_pos);
+        }
+
+        last_pos = get_flattened_position(M, k);
+    }
+}
+
+void set_position(sparse_weight_matrix *M, uint16_t entry, uint32_t position) {
+    uint16_t row = get_row_from_position(M, position);
+    uint16_t col = get_col_from_position(M, position);
+
+    assert(row < UINT16_MAX);
+    assert(col < UINT16_MAX);
+    assert(row <= M->n_rows);
+    assert(col < M->n_cols);
+
+    M->rows[entry] = (uint16_t) row;
+    M->cols[entry] = (uint16_t) col;
 }
 
 /**
@@ -239,11 +305,14 @@ uint32_t get_col_from_position(sparse_weight_matrix *M, uint32_t position) {
  * @param entry_a
  * @param entry_b
  */
-void swap(sparse_weight_matrix *M, uint32_t entry_a, uint32_t entry_b) {
-    uint32_t tmp_row;
-    uint32_t tmp_col;
+void swap(sparse_weight_matrix *M, uint16_t entry_a, uint16_t entry_b) {
+    uint16_t tmp_row;
+    uint16_t tmp_col;
     float tmp_theta;
     bool tmp_sign;
+
+    assert(entry_a < M->number_of_entries);
+    assert(entry_b < M->number_of_entries);
 
     uint32_t n_flattened = M->n_rows * M->n_cols;
 
@@ -272,11 +341,11 @@ void swap(sparse_weight_matrix *M, uint32_t entry_a, uint32_t entry_b) {
     array, and places all smaller (smaller than pivot)
    to left of pivot and all greater elements to right
    of pivot */
-uint32_t partition(sparse_weight_matrix *M, uint32_t low, uint32_t high) {
-    uint32_t pivot = get_flattened_position(M, high);    // pivot
-    uint32_t i = (low - 1);  // Index of smaller element
+uint16_t partition(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high) {
+    uint32_t pivot = get_flattened_position(M, entry_high);    // pivot
+    uint16_t i = (entry_low - 1);  // Index of smaller element
 
-    for (uint32_t j = low; j <= high - 1; j++) {
+    for (uint16_t j = entry_low; j <= entry_high - 1; j++) {
         // If current element is smaller than or
         // equal to pivot
         if (get_flattened_position(M, j) <= pivot) {
@@ -285,7 +354,7 @@ uint32_t partition(sparse_weight_matrix *M, uint32_t low, uint32_t high) {
         }
     }
 
-    swap(M, i + 1, high);
+    swap(M, i + 1, entry_high);
 
     return (i + 1);
 }
@@ -293,21 +362,22 @@ uint32_t partition(sparse_weight_matrix *M, uint32_t low, uint32_t high) {
 /**
  * Sort the sparse M from index low to index high using quickSort
  * @param M
- * @param low
- * @param high
+ * @param entry_low
+ * @param entry_high
  */
-void quickSort(sparse_weight_matrix *M, uint32_t low, uint32_t high) {
+void quickSort(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high) {
 
-    if (low < high) {
+    if (entry_low < entry_high) {
         /* pi is partitioning index, arr[p] is now at right place */
-        uint32_t pi = partition(M, low, high);
+        uint16_t pi = partition(M, entry_low, entry_high);
 
         // Separately sort elements before
         // partition and after partition
-        quickSort(M, low, pi - 1);
-        quickSort(M, pi + 1, high);
+        quickSort(M, entry_low, pi - 1);
+        quickSort(M, pi + 1, entry_high);
     }
 }
+
 
 /**
  * Usage of a function to move the randomly added entries to avoid having doubles
@@ -317,15 +387,15 @@ void quickSort(sparse_weight_matrix *M, uint32_t low, uint32_t high) {
  * @param new_n_entries
  * @return
  */
-int ignore_or_slide_copied_position(sparse_weight_matrix *M, uint32_t k, uint32_t k_to_insert, uint32_t new_n_entries) {
+void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t k, uint16_t k_to_insert) {
     //assert(k_to_insert == k + 1);
 
     uint32_t previous_pos = get_flattened_position(M, k);
     uint32_t pos_i = get_flattened_position(M, k_to_insert);
-
-    uint32_t ignore_it = 0;
-    uint32_t i = k_to_insert;
     uint32_t n_flattened = M->n_rows * M->n_cols;
+
+    uint16_t ignore_it = 0;
+    uint16_t i = k_to_insert;
 
     while (pos_i < n_flattened && previous_pos == pos_i) {
 
@@ -341,29 +411,114 @@ int ignore_or_slide_copied_position(sparse_weight_matrix *M, uint32_t k, uint32_
         pos_i = get_flattened_position(M, i);
     }
 
-    return ignore_it;
+    M->number_of_entries -= ignore_it;
 
 }
 
-void put_new_random_entries(sparse_weight_matrix *M, uint32_t n_new) {
+/**
+ * Sort algorithm that is taking an array that is sorted on both sides of an element somewhere.
+ * It also assumes that the first sorted part is much larger than the second one.
+ * @param M
+ * @param first_index
+ * @param split_index
+ * @param last_index
+ */
+void sort_partly_sorted(sparse_weight_matrix *M, uint16_t first_index, uint16_t split_index) {
+
+    if (first_index == split_index || split_index == M->number_of_entries) {
+        return;
+    }
+
+    uint16_t k = first_index;
+    uint16_t swap_count;
+
+    check_order(M,first_index,split_index);
+    check_order(M,split_index,M->number_of_entries);
+
+    {
+        uint32_t split_position = get_flattened_position(M, split_index);
+        uint32_t position_k = get_flattened_position(M, k);
+
+        while (k < split_index && position_k <= split_position) {
+
+            if (split_position == position_k) {
+                ignore_or_slide_copied_specific_position(M, k, split_index);
+                split_position = get_flattened_position(M, split_index);
+                assert(split_position > position_k);
+            }
+            else{
+                k++;
+                position_k = get_flattened_position(M, k);
+            }
+
+        }
+
+        swap_count = 0;
+        while (split_index + swap_count < M->number_of_entries
+               && k + swap_count < split_index
+               && get_flattened_position(M, split_index + swap_count) < position_k) {
+            swap_count++;
+        }
+    }
+
+    for (uint16_t j = 0; j < swap_count; j++)
+        swap(M, k + j, split_index + j);
+    k += swap_count;
+
+    sort_partly_sorted(M, split_index, split_index + swap_count);
+    sort_partly_sorted(M, k, split_index);
+}
+
+
+
+/**
+ * Usage of a function to move the randomly added entries to avoid having doubles
+ * @param M
+ * @param k
+ * @param k_to_insert
+ * @param number_of_entries
+ * @return
+ */
+void slide_or_ignore_all_doubles(sparse_weight_matrix *M, uint16_t from_k) {
+    uint16_t k;
+    uint16_t next_k;
+    uint32_t position_k;
+    uint32_t position_next_k;
+    uint16_t n_ignored = 0;
+
+    for (k = M->number_of_entries - 2; k >= from_k - 1; k--) {
+        position_k = get_flattened_position(M, k);
+
+        next_k = k + 1;
+        position_next_k = get_flattened_position(M, next_k);
+
+        // We need a while because there might be repetitions
+        while (position_k == position_next_k) {
+
+            ignore_or_slide_copied_specific_position(M, k, next_k);
+
+            position_k = get_flattened_position(M, k);
+            position_next_k = get_flattened_position(M, next_k);
+        }
+    }
+
+}
+
+
+
+void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
+    
     if (n_new == 0) {
         return;
     }
     uint32_t n_flattened = M->n_rows * M->n_cols;
-    uint32_t old_n_entries = M->number_of_entries;
-    uint32_t new_n_entries = old_n_entries + n_new;
+    uint16_t old_n_entries = M->number_of_entries;
+    M->number_of_entries = old_n_entries + n_new;
 
-    uint32_t k_print;
-    uint32_t k;
+    uint16_t k;
 
     // tmp variables necessary to generate the new positions
     uint32_t new_position;
-    uint32_t pos;
-
-    // Variables for insertion in the array
-    uint32_t n_ignored = 0;
-    uint32_t position_k;
-    uint32_t i;
 
     // Generate the new ordered entries and append them into the matrix
     for (k = 0; k < n_new; k++) {
@@ -375,7 +530,7 @@ void put_new_random_entries(sparse_weight_matrix *M, uint32_t n_new) {
     }
 
     // Sort the appended values to accelerate the insertion inside the array
-    quickSort(M, old_n_entries, new_n_entries-1);
+    quickSort(M, old_n_entries, M->number_of_entries - 1);
 
     // Make sure there is no equality in the numbers that are the appended section of the array.
     //
@@ -383,74 +538,18 @@ void put_new_random_entries(sparse_weight_matrix *M, uint32_t n_new) {
     // - Put left or right the positions to avoid overlap
     // - If non of them is possible, push to the end and ignore this new entry
 
-    uint32_t next_k;
-    uint32_t position_next_k;
+    slide_or_ignore_all_doubles(M, old_n_entries);
 
-    for (k = new_n_entries - 2; k >= old_n_entries - 1; k--) {
-        position_k = get_flattened_position(M, k);
+    // The algorithm now takes two separate part of the array: early part (old elements) and later part (new elements)
+    // Those two parts are respectively ordered and we need to order them in a single array. One may want to use quick
+    // sort here again but I think it more efficient to do as follow:
+    //
+    // Hold an index k in the early part and an index new_k in the later parts.
+    // Everything below k in the early part should correspond to the single array that will be sorted at the end.
+    // We proceed to the loop:
 
-        next_k = k + 1;
-        position_next_k = get_flattened_position(M, next_k);
+    sort_partly_sorted(M, 0, old_n_entries);
 
-        // We need a while because there might be repetitions
-        while (position_k == position_next_k) {
-
-            n_ignored += ignore_or_slide_copied_position(M, k, next_k, new_n_entries);
-
-            position_k = get_flattened_position(M, k);
-            position_next_k = get_flattened_position(M, next_k);
-        }
-    }
-
-
-    // The algorithm insert the ordered new elements in the ordered array one by one.
-    // Doing through the entries:
-    // -fetch the next index k to insert
-    // -if the current index is smaller do nothing
-    // -else insert here the new index and put this index as the new index to insert
-    // -in case of equality of the position, put the new element at the end and ignore it
-
-    uint32_t k_to_insert;
-    uint32_t position_k_to_insert;
-
-    k_to_insert = old_n_entries;
-    for (k = 0; k < M->number_of_entries; k++) {
-
-        position_k = get_flattened_position(M, k);
-        position_k_to_insert = get_flattened_position(M, k_to_insert);
-
-        // We should insert this new element here
-        if (position_k > position_k_to_insert) {
-
-            // Swap the entry with the entry to insert
-            swap(M, k, k_to_insert);
-
-            // Pushing the old element further into the insertion queue if it is not the next one that
-            // should be reinserted
-            i = 0;
-            while (k_to_insert + i + 1 < new_n_entries &&
-                   get_flattened_position(M, k_to_insert + i) > get_flattened_position(M, k_to_insert + i + 1)) {
-                swap(M, k_to_insert + i, k_to_insert + i + 1);
-                i++;
-            }
-
-            // Verify that this element is not introducing a double in the insertion queue.
-            // The next element is a random one, is can be moved and changed
-            if (k_to_insert + i + 1 < new_n_entries &&
-                get_flattened_position(M, k_to_insert + i) == get_flattened_position(M, k_to_insert + i + 1))
-                n_ignored += ignore_or_slide_copied_position(M, k_to_insert + i, k_to_insert + i + 1,
-                                                             new_n_entries);
-
-        } else if (position_k == position_k_to_insert) {
-
-            n_ignored += ignore_or_slide_copied_position(M, k, k_to_insert, new_n_entries);
-
-        } else {
-            // There is no entry to insert here, we simply move on.
-        }
-    }
-
-    M->number_of_entries = new_n_entries - n_ignored;
     assert(M->number_of_entries <= M->max_entries);
     check_sparse_matrix_format(M);
 }
@@ -460,9 +559,9 @@ void put_new_random_entries(sparse_weight_matrix *M, uint32_t n_new) {
  * @param M
  * @param entry_idx
  */
-void delete_entry(sparse_weight_matrix *M, uint32_t entry_idx) {
+void delete_entry(sparse_weight_matrix *M, uint16_t entry_idx) {
 
-    uint32_t k;
+    uint16_t k;
     assert(entry_idx < M->number_of_entries);
 
     for (k = entry_idx; k < M->number_of_entries - 1; k++) {
@@ -483,8 +582,8 @@ void delete_entry(sparse_weight_matrix *M, uint32_t entry_idx) {
  */
 void delete_negative_entries(sparse_weight_matrix *M) {
 
-    uint32_t k;
-    uint32_t n_negative = 0;
+    uint16_t k;
+    uint16_t n_negative = 0;
     uint32_t n_flattened = M->n_cols * M->n_rows;
 
     for (k = 0; k < M->number_of_entries; k++) {
@@ -530,10 +629,11 @@ void vector_substraction(float *a, uint size_a, float *b, uint size_b, float *re
  * @param n_rows
  * @param n_cols
  */
-void set_dimensions(sparse_weight_matrix *M, uint32_t n_rows, uint32_t n_cols) {
+void set_dimensions(sparse_weight_matrix *M, uint16_t n_rows, uint16_t n_cols, float connectivity) {
     M->n_rows = n_rows;
     M->n_cols = n_cols;
-    M->max_entries = n_rows * n_cols;
+    M->max_entries = ceil((uint16_t) n_cols * (uint16_t) n_rows *
+                          connectivity); //ceil((float)M->n_rows * (float)M->n_cols * connectivity);
 }
 
 /**
@@ -542,7 +642,7 @@ void set_dimensions(sparse_weight_matrix *M, uint32_t n_rows, uint32_t n_cols) {
  * @param entry_idx
  * @return
  */
-bool get_sign(sparse_weight_matrix *M, uint32_t entry_idx) {
+bool get_sign(sparse_weight_matrix *M, uint16_t entry_idx) {
     uint8_t sign = M->bit_sign_storage[entry_idx / 8];
     sign = (uint8_t) ((sign >> (entry_idx % 8)) & 0x1);
 
@@ -555,7 +655,7 @@ bool get_sign(sparse_weight_matrix *M, uint32_t entry_idx) {
  * @param entry_idx
  * @param val
  */
-void set_sign(sparse_weight_matrix *M, uint32_t entry_idx, bool val) {
+void set_sign(sparse_weight_matrix *M, uint16_t entry_idx, bool val) {
     if (val) M->bit_sign_storage[entry_idx / 8] |= 1 << (entry_idx % 8);
     else M->bit_sign_storage[entry_idx / 8] &= ~(1 << (entry_idx % 8));
 }
@@ -660,42 +760,45 @@ int get_sign_by_row_col_pair(sparse_weight_matrix *M, int i, int j) {
 
 }
 
+
 /**
- * Print a weight matrix in the python matrix format.
- * @param v
- * @param size
+ * Fill-in a sparse matrix with random value.
+ * It uses a Xavier initialization of the form: mask * randn(n_in,n_out)/n_in,
+ * if randn generates gaussian number, n_in is the number of inputs, n_out is the number of outputs.
+ * The mask allows non zero values at each position with probability "connectivity": mask = rand(n_in,n_out) < connectivity
+ * @param M
+ * @param connectivity
  */
-void print_weight_matrix(sparse_weight_matrix *M) {
+void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivity) {
 
-    int i;
-    int j;
-    int entry;
+    uint16_t k = 0;
+    uint32_t pos = 0;
+    uint32_t n_flattened = M->n_rows * M->n_cols;
+    float value;
 
-    check_sparse_matrix_format(M);
+    while (pos < n_flattened && k < M->max_entries) {
 
-    printf("[");
-    for (i = 0; i < M->n_rows; i += 1) {
-        if (i > 0)
-            printf("\n ");
+        if (rand_kiss() < connectivity) {
+            value = (randn_kiss() / (float) sqrt(M->n_rows));
 
-        printf("[");
-        for (j = 0; j < M->n_cols; j += 1) {
-            entry = is_entry_and_fetch(M, i, j);
-            if (entry == -1)
-                printf("_");
+            set_position(M, k, pos);
+            M->thetas[k] = fabsf(value);
+
+            if (rand_kiss() > 0.5)
+                set_sign(M, k, true);
             else
-                printf("%.2g", get_weight_by_entry(M, entry));
-            if (j < M->n_cols - 1)
-                printf(", ");
+                set_sign(M, k, false);
 
+            k += 1;
+
+            M->number_of_entries = k;
+            assert(k <= M->max_entries);
         }
-        printf("]");
-        if (i < M->n_rows - 1)
-            printf(", ");
-    }
-    printf("] \n");
-}
+        pos++;
 
+    }
+
+}
 
 /**
  * Print a weight matrix in the python matrix format.
@@ -849,8 +952,8 @@ void right_dot(float *v, uint size_v, sparse_weight_matrix *M, float *result, ui
  * @param M
  */
 void check_sparse_matrix_format(sparse_weight_matrix *M) {
-    if(SKIP_CHECK){
-        return ;
+    if (SKIP_CHECK) {
+        return;
     }
 
     int k;
@@ -861,13 +964,15 @@ void check_sparse_matrix_format(sparse_weight_matrix *M) {
     last_j = -1;
 
     for (k = 0; k < M->number_of_entries; k++) {
-        if (k > 0)
+        if (k > 0) {
             assert(get_flattened_position(M, k) > coord_to_position(M, last_i, last_j));
+        }
 
-        assert((int)M->rows[k] >= last_i);
 
-        if ((int)M->rows[k] == last_i)
-            assert((int)M->cols[k] > last_j);
+        assert((int) M->rows[k] >= last_i);
+
+        if ((int) M->rows[k] == last_i)
+            assert((int) M->cols[k] > last_j);
 
         last_i = M->rows[k];
         last_j = M->cols[k];
@@ -887,10 +992,10 @@ void check_sparse_matrix_format(sparse_weight_matrix *M) {
  * @return
  */
 float gradient_wrt_theta_entry(sparse_weight_matrix *weight_matrix, float *a_pre, uint size_a_pre, float *d_post,
-                               uint size_d_post, uint32_t entry_idx) {
+                               uint size_d_post, uint16_t entry_idx) {
 
     float theta = weight_matrix->thetas[entry_idx];
-    if(theta<0){
+    if (theta < 0) {
         return 0;
     }
 
@@ -1015,7 +1120,7 @@ void softmax(float *a, uint size_a, float *result, uint size_result) {
 void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre, float *d_post, uint size_d_post,
                           float learning_rate) {
 
-    uint32_t k;
+    uint16_t k;
     float grad;
     float dtheta;
 
@@ -1028,10 +1133,9 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
 }
 
-void rewiring(sparse_weight_matrix *W, uint32_t rewiring_number) {
-
+void rewiring(sparse_weight_matrix *W, uint16_t rewiring_number) {
     delete_negative_entries(W);
-    put_new_random_entries(W,rewiring_number);
+    put_new_random_entries(W, rewiring_number);
 }
 
 /**

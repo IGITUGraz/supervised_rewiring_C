@@ -8,7 +8,7 @@ int test_math() {
     // Test for creating a matrix and printing it
 
     sparse_weight_matrix M;
-    set_dimensions(&M,3,4);
+    set_dimensions(&M,3,4,0.99);
     uint16_t rows_of_M[M.max_entries];
     uint16_t cols_of_M[M.max_entries];
     float_t thetas_of_M[M.max_entries];
@@ -112,8 +112,8 @@ int test_math() {
     put_new_entry(&M,2,3,9,false,true);
     printf("Old matrix: \n");
     print_weight_matrix(&M);
-    printf("New matrix with k new zeros: \n");
-    put_new_random_entries(&M,1);
+    printf("New matrix with 3 new zeros: \n");
+    put_new_random_entries(&M,3);
     print_weight_matrix(&M);
 
     printf("\nTest delete random entries (Should delete the zeros... )\n");

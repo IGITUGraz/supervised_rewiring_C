@@ -2,7 +2,7 @@
 
 #define SET_WEIGHTS(w, n1, n2, connectivity)               \
     sparse_weight_matrix w;                                \
-    set_dimensions(&w,n1,n2);                              \
+    set_dimensions(&w,n1,n2,connectivity);                 \
                                                            \
     uint16_t rows_of_##w[w.max_entries];                   \
     uint16_t cols_of_##w[w.max_entries];                   \
@@ -27,9 +27,9 @@ int test_network() {
     uint n_1 = 4;
     uint n_2 = 4;
 
-    float connectivity_01 = 0.5;
-    float connectivity_12 = 0.5;
-    float connectivity_23 = 0.5;
+    float connectivity_01 = 0.8;
+    float connectivity_12 = 0.8;
+    float connectivity_23 = 0.8;
 
     uint n_class = 3;
     float learning_rate = 0.05;
@@ -147,6 +147,15 @@ int test_network() {
 
     printf("\nW_23:\n");
     print_weight_matrix(&W_23);
+
+    delete_entry(&W_01,0);
+    delete_entry(&W_01,1);
+
+    delete_entry(&W_12,1);
+    delete_entry(&W_12,2);
+
+    delete_entry(&W_23,1);
+    delete_entry(&W_23,2);
 
     rewiring(&W_01,2);
     rewiring(&W_12,2);
