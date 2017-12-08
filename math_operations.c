@@ -1,4 +1,3 @@
-#include <jmorecfg.h>
 #include "math_operations.h"
 #include <time.h>
 
@@ -398,7 +397,6 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
     uint16_t i = k_to_insert;
 
     while (pos_i < n_flattened && previous_pos == pos_i) {
-
         M->rows[i] = get_row_from_position(M, pos_i + 1);
         M->cols[i] = get_col_from_position(M, pos_i + 1);
 
@@ -407,7 +405,11 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
         if (previous_pos == n_flattened)
             ignore_it = 1;
 
-        i++;
+        if (i + 1 < M->number_of_entries)
+            i++;
+        else
+            break;
+
         pos_i = get_flattened_position(M, i);
     }
 
@@ -484,7 +486,6 @@ void slide_or_ignore_all_doubles(sparse_weight_matrix *M, uint16_t from_k) {
     uint16_t next_k;
     uint32_t position_k;
     uint32_t position_next_k;
-    uint16_t n_ignored = 0;
 
     for (k = M->number_of_entries - 2; k >= from_k - 1; k--) {
         position_k = get_flattened_position(M, k);
@@ -633,7 +634,7 @@ void vector_substraction(float *a, uint size_a, float *b, uint size_b, float *re
 void set_dimensions(sparse_weight_matrix *M, uint16_t n_rows, uint16_t n_cols, float connectivity) {
     M->n_rows = n_rows;
     M->n_cols = n_cols;
-    M->max_entries = ceil((uint16_t) n_cols * (uint16_t) n_rows *
+    M->max_entries = (uint16_t)ceilf((uint16_t) n_cols * (uint16_t) n_rows *
                           connectivity); //ceil((float)M->n_rows * (float)M->n_cols * connectivity);
 }
 
@@ -780,7 +781,7 @@ void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivit
     while (pos < n_flattened && k < M->max_entries) {
 
         if (rand_kiss() < connectivity) {
-            value = (randn_kiss() / (float) sqrt(M->n_rows));
+            value = (randn_kiss() / sqrtf(M->n_rows));
 
             set_position(M, k, pos);
             M->thetas[k] = fabsf(value);
@@ -1102,7 +1103,7 @@ void softmax(float *a, uint size_a, float *result, uint size_result) {
 
     sum = 0;
     for (k = 0; k < size_a; k++) {
-        result[k] = exp(a[k] - a_max);
+        result[k] = expf(a[k] - a_max);
         sum += result[k];
     }
 
