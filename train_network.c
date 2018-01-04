@@ -110,10 +110,10 @@ int train_network() {
     printf ( "begin at : %s", asctime (timeinfo) );
 
     printf("test report:\n");
-    printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi \n");
+    printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi (happens every %d iterations) \n",REWIRING_PERIOD);
     printf("%1d \t \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",
-                        0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, 0,
-                       0,0,0,0,0);
+                        0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, 0.,
+                       0.,0.,0.,0.,0.);
 
     // BEGIN OF EPOCH
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {

@@ -3,7 +3,7 @@
 #include <time.h>
 
 /***
- * Library of math opeartions required to implement backprop in feedforward relu units with rewiring.
+ * Library of math operations required to implement backprop in feedforward relu units with rewiring.
  * The weights are very sparse therefore it uses a minimal amounf of memory.
  *
  * Authors: Guillaume Bellec
