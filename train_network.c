@@ -110,17 +110,16 @@ int train_network() {
     printf ( "begin at : %s", asctime (timeinfo) );
 
     printf("test report:\n");
-    printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi (happens every %d iterations) \n",REWIRING_PERIOD);
+    printf("epoch \t iter \t n_W01 \t n_W12 \t n_W23 \t acc \t t_iter \t t_get_im \t t_forw \t t_back \t t_rewi \n");
     printf("%1d \t \t %5d \t %d \t %d \t %d \t %.3f \t %.5f \t %2.2f%% \t\t %2.2f%% \t\t %2.2f%% \t\t %2.2f%%\n",
-                        0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, 0.,
-                       0.,0.,0.,0.,0.);
+                        0, 0, W_01.number_of_entries, W_12.number_of_entries, W_23.number_of_entries, .0,
+                       .0,.0,.0,.0,.0);
 
     // BEGIN OF EPOCH
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {
         //BEGIN OF ITERATION
         for (train_image_num = 0; train_image_num < NUM_TRAIN; train_image_num++){
-            //for (train_image_num = 0; train_image_num < 2; train_image_num++){
-
+        //for (train_image_num = 0; train_image_num < 20000; train_image_num++){
             //###################### TRAIN PHASE ######################
             //fetch time
             if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
@@ -173,7 +172,7 @@ int train_network() {
                 t5 = clock();
 
             //###################### TEST PHASE ########################
-            //compute one accuracy every 1k training
+            //compute one accuracy every 10k training
             if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0){
                 scoreboard  = 0;
                 for (uint16_t test_loop = 0; test_loop < N_TEST_IMAGES; test_loop++){

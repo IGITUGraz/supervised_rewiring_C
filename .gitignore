@@ -17,5 +17,5 @@ train_network
 
 *.swp
 
-
+CMakeCache.txt
 
