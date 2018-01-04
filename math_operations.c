@@ -4,14 +4,21 @@
 
 /***
  * Library of math operations required to implement backprop in feedforward relu units with rewiring.
- * The weights are very sparse therefore it uses a minimal amounf of memory.
+ * The weight matrices are implement as sparse matrices to optimize the speed of memory requirement of the matrices
+ * and the matrix multiplications. The additional constraint are that the code only stores variables on the stack
+ * (no usage of malloc and calloc).
+ * The matrices are stored as a quadruple of arrays with (row, column, weight amplitude (theta), weight sign).
  *
- * Authors: Guillaume Bellec
- * Date: 25th of August 2017
+ * Authors:
+ *      Guillaume Bellec - TU Graz (sparse matrices and neural network related operations),
+ *      Florian Kelber - TU Dresden (bit shift to store the weight signs efficiently)
+ *
+ * Special thanks to Michael Hopkins for providing the mars_kiss32() random number generator.
+ *
+ * First creation: 25th of August 2017
+ * Latest update: 16th of November 2017
  */
 
-// a constant definition exported by library:
-//#define LEARNING_RATE 0.005
 #define L1_COEFF 0.0001
 #define NOISE_AMPLITUDE 0.000001
 #define SKIP_CHECK true
