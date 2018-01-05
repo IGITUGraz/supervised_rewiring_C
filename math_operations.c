@@ -250,7 +250,7 @@ void print_weight_matrix_containers(sparse_weight_matrix *M, bool print_non_assi
 
     int entry;
 
-    check_sparse_matrix_format(M);
+    //check_sparse_matrix_format(M);
 
     for (entry = 0; entry < M->max_entries; entry++) {
         if (entry == M->number_of_entries) {
@@ -386,7 +386,9 @@ void quickSort(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high)
 
 
 /**
- * Usage of a function to move the randomly added entries to avoid having doubles
+ * Usage of a function to move the randomly added entries to avoid having doubles.
+ *
+ *
  * @param M
  * @param k
  * @param k_to_insert
@@ -403,6 +405,8 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
     uint16_t ignore_it = 0;
     uint16_t i = k_to_insert;
 
+    // There is a need of a loop in case many elements are following eachother.
+    // Then we will push all of them by a position of 1 until it fits into the sparse array or until we have to delete elements.
     while (pos_i < n_flattened && previous_pos == pos_i) {
         M->rows[i] = get_row_from_position(M, pos_i + 1);
         M->cols[i] = get_col_from_position(M, pos_i + 1);
@@ -424,61 +428,81 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
 
 }
 
+
 /**
- * Sort algorithm that is taking an array that is sorted on both sides of an element somewhere.
+ * Sort algorithm that is taking an array that is sorted on both sides of an element.
+ *
  * It also assumes that the first sorted part is much larger than the second one.
  * @param M
- * @param first_index
  * @param split_index
- * @param last_index
  */
-void sort_partly_sorted(sparse_weight_matrix *M, uint16_t first_index, uint16_t split_index) {
+void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t split_index) {
 
-    if (first_index == split_index || split_index == M->number_of_entries) {
-        return;
-    }
+    uint16_t k_left = 0; // first index of the left array
+    uint16_t k_right = split_index; // first index of the right array
 
-    uint16_t k = first_index;
-    uint16_t swap_count;
+    // Define the position (ordered value) with high precision on temporary variables
+    uint32_t k_right_position = get_flattened_position(M, k_right);
+    uint32_t k_left_position = get_flattened_position(M, k_left);
 
-    check_order(M,first_index,split_index);
-    check_order(M,split_index,M->number_of_entries);
+    // Allocate variables needed to swap place a left member into the right array
+    uint16_t j;
+    uint32_t position_j;
+    uint32_t position_j_next;
 
-    {
-        uint32_t split_position = get_flattened_position(M, split_index);
-        uint32_t position_k = get_flattened_position(M, k);
+    while (k_left < k_right && k_right < M->number_of_entries) {
 
-        while (k < split_index && position_k <= split_position) {
+        // The loop condition to start the loop should be verified
+        check_order(M, k_left, k_right);
+        check_order(M, k_right, M->number_of_entries);
 
-            if (split_position == position_k) {
-                ignore_or_slide_copied_specific_position(M, k, split_index);
-                split_position = get_flattened_position(M, split_index);
-                assert(split_position > position_k);
-            }
-            else{
-                k++;
-                position_k = get_flattened_position(M, k);
+        // Move the k_left index to point to the index where we can insert k_right
+        while (k_left < k_right && k_left_position <= k_right_position) {
+
+            if (k_right_position == k_left_position) { // This special case is important to ensure that k is at least 1
+                ignore_or_slide_copied_specific_position(M, k_left,k_right); // Move the position of split_index if equality
+                k_right_position = get_flattened_position(M,k_right); // Fetch the new position, if split_index was thrown out of the array its position is equal to the array size and the alogirhtm will stop.
+                assert(k_right_position > k_left_position);
+            } else {
+                k_left += 1;
+                k_left_position = get_flattened_position(M, k_left);  // Increase k
             }
 
         }
 
-        swap_count = 0;
-        while (split_index + swap_count < M->number_of_entries
-               && k + swap_count < split_index
-               && get_flattened_position(M, split_index + swap_count) < position_k) {
-            swap_count++;
+        // Insert the new element in the left array
+        swap(M, k_left, k_right);
+        k_left_position = get_flattened_position(M, k_left);
+        k_right_position = get_flattened_position(M, k_right);
+
+        check_order(M, 0, k_right); // check that the left array is sorted
+
+        // Swap until the left right is sorted
+        j = k_right;
+        position_j = get_flattened_position(M, j);
+        position_j_next = get_flattened_position(M, j + 1);
+
+        // Push the old element in the right array, until the right array end up being sorted
+        while (j < M->number_of_entries
+               && position_j >= position_j_next) {
+
+            if (position_j == position_j_next) {
+                // equality has to be considered carefully
+                ignore_or_slide_copied_specific_position(M, j, j + 1);
+            } else {
+                swap(M, j, j + 1);
+                j++;
+            }
+
+            position_j = get_flattened_position(M, j);
+            position_j_next = get_flattened_position(M, j + 1);
+
         }
+        check_order(M, k_right, M->number_of_entries); // check the the right array is sorted
     }
 
-    for (uint16_t j = 0; j < swap_count; j++)
-        swap(M, k + j, split_index + j);
-    k += swap_count;
-
-    sort_partly_sorted(M, split_index, split_index + swap_count);
-    sort_partly_sorted(M, k, split_index);
+    check_order(M, 0, M->number_of_entries); // Every thing is sorted
 }
-
-
 
 /**
  * Usage of a function to move the randomly added entries to avoid having doubles
@@ -511,7 +535,6 @@ void slide_or_ignore_all_doubles(sparse_weight_matrix *M, uint16_t from_k) {
     }
 
 }
-
 
 
 void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
@@ -557,7 +580,7 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     // Everything below k in the early part should correspond to the single array that will be sorted at the end.
     // We proceed to the loop:
 
-    sort_partly_sorted(M, 0, old_n_entries);
+    sort_concatenation_of_two_sorted_arrays(M, old_n_entries);
 
     assert(M->number_of_entries <= M->max_entries);
     check_sparse_matrix_format(M);
@@ -641,8 +664,8 @@ void vector_substraction(float *a, uint size_a, float *b, uint size_b, float *re
 void set_dimensions(sparse_weight_matrix *M, uint16_t n_rows, uint16_t n_cols, float connectivity) {
     M->n_rows = n_rows;
     M->n_cols = n_cols;
-    M->max_entries = (uint16_t)ceilf((uint16_t) n_cols * (uint16_t) n_rows *
-                          connectivity); //ceil((float)M->n_rows * (float)M->n_cols * connectivity);
+    M->max_entries = (uint16_t) ceilf((uint16_t) n_cols * (uint16_t) n_rows *
+                                      connectivity); //ceil((float)M->n_rows * (float)M->n_cols * connectivity);
 }
 
 /**
@@ -1144,7 +1167,7 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
 void rewiring(sparse_weight_matrix *W) {
     delete_negative_entries(W);
-    put_new_random_entries(W,W->max_entries - W->number_of_entries);
+    put_new_random_entries(W, W->max_entries - W->number_of_entries);
 }
 
 /**
