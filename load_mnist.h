@@ -6,10 +6,8 @@
 #define MNIST_TRAIN_LAB_FILE "./MNIST/train-labels-idx1-ubyte"
 #define MNIST_TEST_IMG_FILE  "./MNIST/t10k-images-idx3-ubyte"
 #define MNIST_TEST_LAB_FILE  "./MNIST/t10k-labels-idx1-ubyte"
-#define NUM_TRAIN               60000
 #define TRAIN_IMAGEF_BUFF    47040016
 #define TRAIN_LABELF_BUFF       60008
-#define NUM_TEST                10000
 #define TEST_IMAGEF_BUFF      7840016
 #define TEST_LABELF_BUFF        10008
 #define IMAGE_ROWS                 28

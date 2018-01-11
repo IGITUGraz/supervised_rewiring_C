@@ -483,7 +483,7 @@ void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t s
         position_j_next = get_flattened_position(M, j + 1);
 
         // Push the old element in the right array, until the right array end up being sorted
-        while (j < M->number_of_entries
+        while (j < M->number_of_entries - 1
                && position_j >= position_j_next) {
 
             if (position_j == position_j_next) {

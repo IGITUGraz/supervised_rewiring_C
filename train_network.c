@@ -20,8 +20,11 @@
 #define NUM_EPOCH                   1
 #define REWIRING_PERIOD             10
 #define REPORT_ACC_PERIOD           10000
+#define NUM_TRAIN                   60000
+
 #define N_TEST_IMAGES               10000
 #define FINAL_LEARNING_RATE         0.005
+#define NUM_TEST                    10000
 
 int train_network() {
     //define network parameter
@@ -119,7 +122,6 @@ int train_network() {
     for (uint epoch = 0; epoch < NUM_EPOCH; epoch++) {
         //BEGIN OF ITERATION
         for (train_image_num = 0; train_image_num < NUM_TRAIN; train_image_num++){
-        //for (train_image_num = 0; train_image_num < 20000; train_image_num++){
             //###################### TRAIN PHASE ######################
             //fetch time
             if ((train_image_num + 1) % REPORT_ACC_PERIOD == 0)
