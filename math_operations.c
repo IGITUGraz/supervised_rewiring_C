@@ -379,7 +379,8 @@ void quickSort(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high)
 
         // Separately sort elements before
         // partition and after partition
-        quickSort(M, entry_low, pi - 1);
+        if (pi > 0)
+            quickSort(M, entry_low, pi - 1);
         quickSort(M, pi + 1, entry_high);
     }
 }

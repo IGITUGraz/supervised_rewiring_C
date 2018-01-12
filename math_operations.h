@@ -59,6 +59,10 @@
     void print_sign_and_theta(sparse_weight_matrix *M);
     void print_vector(float *v, uint size);
 
+    void check_order(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_high);
+    void print_weight_matrix_containers(sparse_weight_matrix *M, bool print_non_assigned);
+    uint32_t rand_int_kiss(uint32_t low, uint32_t high);
+
     /**
      * MATH OPERATIONS
      */
