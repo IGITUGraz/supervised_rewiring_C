@@ -214,7 +214,6 @@ int train_network() {
             printf("learning rate -> %f\n", learning_rate);
         }
 
-
         if (learning_rate < FINAL_LEARNING_RATE)
             break;
 

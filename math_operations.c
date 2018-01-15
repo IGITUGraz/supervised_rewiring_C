@@ -18,8 +18,8 @@
  * Latest update: 16th of November 2017
  */
 
-#define L1_COEFF 0.0001
-#define NOISE_AMPLITUDE 0.000001
+#define L1_COEFF 1e-4
+#define NOISE_AMPLITUDE 3e-4
 #define SKIP_CHECK true
 
 /**
@@ -546,6 +546,7 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     if (n_new == 0) {
         return;
     }
+
     uint32_t n_flattened = M->n_rows * M->n_cols;
     uint16_t old_n_entries = M->number_of_entries;
     M->number_of_entries = old_n_entries + n_new;
@@ -623,7 +624,8 @@ void delete_negative_entries(sparse_weight_matrix *M) {
     uint32_t n_flattened = M->n_cols * M->n_rows;
 
     for (k = 0; k < M->number_of_entries; k++) {
-        if (M->thetas[k] <= 0) {
+
+        if (M->thetas[k] < 0) {
             M->rows[k - n_negative] = get_row_from_position(M, n_flattened);
             M->cols[k - n_negative] = get_col_from_position(M, n_flattened);
             n_negative += 1;
@@ -1164,7 +1166,6 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
         grad = gradient_wrt_theta_entry(W, a_pre, size_a_pre, d_post, size_d_post, k);
         dtheta = learning_rate * (-L1_COEFF - grad + NOISE_AMPLITUDE * randn_kiss());
         W->thetas[k] += dtheta;
-
     }
 
 }
