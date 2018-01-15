@@ -312,6 +312,9 @@ void set_position(sparse_weight_matrix *M, uint16_t entry, uint32_t position) {
  * @param entry_b
  */
 void swap(sparse_weight_matrix *M, uint16_t entry_a, uint16_t entry_b) {
+    if(entry_a == entry_b)
+        return;
+
     uint16_t tmp_row;
     uint16_t tmp_col;
     float tmp_theta;
@@ -406,7 +409,7 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
     uint16_t ignore_it = 0;
     uint16_t i = k_to_insert;
 
-    // There is a need of a loop in case many elements are following eachother.
+    // There is a need of a loop in case many elements are following each other.
     // Then we will push all of them by a position of 1 until it fits into the sparse array or until we have to delete elements.
     while (pos_i < n_flattened && previous_pos == pos_i) {
         M->rows[i] = get_row_from_position(M, pos_i + 1);
@@ -1190,3 +1193,89 @@ uint8_t argmax(float *prob, uint8_t size_prob) {
 
     return max_index;
 }
+
+
+/**
+ *ensure any 2 entries don't have the same position. If there exists, slide one to the next position
+ *If not possible, delele this entry
+ *The precondition to use this function is that the matrix has been sorted
+ * @param M
+ */
+void eliminate_same_position(sparse_weight_matrix *M){
+    uint16_t k;
+    uint32_t position_k, position_k_pre;
+    uint32_t n_flattened = M->n_rows * M->n_cols;
+    bool old_entry_k, no_slide;
+
+    //it is possible that several occupay the same position, the for loop only one, so we need the while loop
+    //only when no slide happens during the for loop, the while loop can be jumped out.
+    do {
+        no_slide = true;
+        for (k = M->number_of_entries - 1; k > 0; k--){
+            position_k     = get_flattened_position(M, k);
+            position_k_pre = get_flattened_position(M, k - 1);
+
+            //from end to beginning, compare the position of 2 adjacent entries.
+            // If k is the old entry, k - 1 must be new rewired, we slide k - 1 to the next position and exchange k - 1 and k to keep the order
+            // If k is the new entry, we slide k to the next position.
+            if (position_k == position_k_pre) {
+                old_entry_k    = (M->thetas[k] == 0)?false:true;    //according to thetas to differentiate the old and new entry
+                no_slide = false;
+                if (old_entry_k){
+                    M->rows[k - 1]   = get_row_from_position(M, position_k + 1);
+                    M->cols[k - 1]   = get_col_from_position(M, position_k + 1);
+                    swap(M, k - 1, k);
+
+                } else {
+                    M->rows[k]   = get_row_from_position(M, position_k + 1);
+                    M->cols[k]   = get_col_from_position(M, position_k + 1);
+
+                }
+                //If slided position beyonds scope, delete this entry
+                if (position_k + 1 == n_flattened)
+                    M->number_of_entries -= 1;
+            }
+        }
+    }while(!no_slide);
+}
+
+
+/**
+ * rewiring 2.0 function, directly generate new entries to replace the negative entries, sort the order and eliminate the entries with same positions
+ *
+ * @param M
+ */
+void rewiring2(sparse_weight_matrix *M) {
+    uint16_t k;
+    uint16_t k_middle = M->number_of_entries - 1;
+    uint32_t new_position;
+    uint32_t n_flattened = M->n_rows * M->n_cols;
+
+
+    // Generate new entries to replace the entries with negative weights
+    for (k = 0; k < M->number_of_entries; k++) {
+        if (M->thetas[k] <= 0) {
+            new_position = rand_int_kiss(0, n_flattened);
+            assert(new_position < n_flattened);
+            M->rows[k]   = get_row_from_position(M, new_position);
+            M->cols[k]   = get_col_from_position(M, new_position);
+            M->thetas[k] = 0;
+            set_sign(M, k, rand_kiss() > 0.5);
+        }
+        //record the entry number of one element, whose position generally in the middle of the matrix space
+        if(M->rows[k] == M->n_rows / 2 - 1 || M->rows[k] == M->n_rows / 2)
+            k_middle = k;
+    }
+
+    //swap the middle-position element with the last entry, so that the first pivot picked up by quick sort holds the middle position
+    //the purpose is to split the matrix into 2 partitions with same size. In this case quick sort requires the minimum memory.
+    swap(M, k_middle, M->number_of_entries - 1);
+
+    //sort the matrix, elements with same position are allowed
+    quickSort(M, 0, M->number_of_entries - 1);
+
+    //eliminate elements with same position
+    eliminate_same_position(M);
+}
+
+

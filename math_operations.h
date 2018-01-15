@@ -83,4 +83,5 @@
     void softmax(float *a, uint size_a, float *result, uint size_result);
 
     uint8_t argmax (float *prob, uint8_t size_prob);
+    void rewiring2(sparse_weight_matrix *M);
 #endif
