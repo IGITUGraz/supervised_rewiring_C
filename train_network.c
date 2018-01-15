@@ -23,7 +23,7 @@
 #define NUM_TRAIN                   60000
 
 #define N_TEST_IMAGES               10000
-#define FINAL_LEARNING_RATE         0.005
+#define FINAL_LEARNING_RATE         0.0005
 #define NUM_TEST                    10000
 
 int train_network() {
@@ -214,7 +214,6 @@ int train_network() {
             learning_rate   /= 2;
             printf("learning rate -> %f\n", learning_rate);
         }
-
 
         if (learning_rate < FINAL_LEARNING_RATE)
             break;
