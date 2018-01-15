@@ -23,7 +23,7 @@
 #define NUM_TRAIN                   60000
 
 #define N_TEST_IMAGES               10000
-#define FINAL_LEARNING_RATE         0.0005
+#define FINAL_LEARNING_RATE         0.005
 #define NUM_TEST                    10000
 
 int train_network() {
