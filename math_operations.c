@@ -631,8 +631,6 @@ void delete_negative_entries(sparse_weight_matrix *M) {
         }
     }
 
-    printf("Found %d/%d negative synapses. \n",n_negative,M->number_of_entries);
-
     M->number_of_entries -= n_negative;
     check_sparse_matrix_format(M);
 }
