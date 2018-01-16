@@ -157,11 +157,24 @@ int test_network() {
     delete_entry(&W_23,1);
     delete_entry(&W_23,2);
 
-    rewiring(&W_01);
-    rewiring(&W_12);
-    rewiring(&W_23);
+    printf("Apply rewiring 01 \n");
 
-    printf("\nAFTER TURNOVER:\n");
+    print_weight_matrix(&W_01);
+    rewiring(&W_01);
+    print_weight_matrix(&W_01);
+
+
+    printf("Apply rewiring 12 \n");
+    print_weight_matrix(&W_12);
+    rewiring(&W_12);
+    print_weight_matrix(&W_12);
+
+    printf("Apply rewiring 23 \n");
+    print_weight_matrix(&W_23);
+    rewiring(&W_23);
+    print_weight_matrix(&W_23);
+
+    printf("\nAFTER REWIRING:\n");
 
     printf("\nW_01:\n");
     print_weight_matrix(&W_01);

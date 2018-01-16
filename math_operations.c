@@ -18,7 +18,7 @@
  * Latest update: 16th of November 2017
  */
 
-#define L1_COEFF 1e-4
+#define L1_COEFF 1e-5
 #define NOISE_AMPLITUDE 3e-4
 #define SKIP_CHECK true
 
@@ -457,7 +457,7 @@ void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t s
         check_order(M, k_right, M->number_of_entries);
 
         // Move the k_left index to point to the index where we can insert k_right
-        while (k_left < k_right && k_left_position <= k_right_position) {
+        while (k_left < k_right && k_left_position <= k_right_position && k_right < M->number_of_entries) {
 
             if (k_right_position == k_left_position) { // This special case is important to ensure that k is at least 1
                 ignore_or_slide_copied_specific_position(M, k_left,k_right); // Move the position of split_index if equality
@@ -471,7 +471,8 @@ void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t s
         }
 
         // Insert the new element in the left array
-        swap(M, k_left, k_right);
+        if(k_right < M->number_of_entries) // Exclude the case where the shift through an element out of the array
+            swap(M, k_left, k_right);
         k_left_position = get_flattened_position(M, k_left);
         k_right_position = get_flattened_position(M, k_right);
 
