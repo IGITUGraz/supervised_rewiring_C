@@ -162,7 +162,6 @@ int train_network() {
                 t4 = clock();
 
             if ((train_image_num+1) % REWIRING_PERIOD == 0){
-
                 rewiring(&W_01);
                 rewiring(&W_12);
                 rewiring(&W_23);
@@ -233,6 +232,6 @@ int train_network() {
 
     t_end = clock();
     printf("The program runs for %.1f s\n",(float)(t_end/CLOCKS_PER_SEC));
-
+    
     return 0;
 }
