@@ -114,9 +114,12 @@ int test_math() {
     print_weight_matrix(&M);
     printf("New matrix with 3 new zeros: \n");
     put_new_random_entries(&M,3);
+
+
     print_weight_matrix(&M);
 
     printf("\nTest delete random entries (Should delete the zeros... )\n");
+
     delete_negative_entries(&M);
     print_weight_matrix(&M);
 

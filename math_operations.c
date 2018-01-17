@@ -53,7 +53,9 @@ uint32_t rand_int_kiss(uint32_t low, uint32_t high) {
     assert(high > low);
     uint32_t i = mars_kiss32();
     i = i % (high - low);
-    return low + i;
+    i += low;
+    assert(i<high);
+    return i;
 }
 
 /**
@@ -223,21 +225,27 @@ void put_new_entry(sparse_weight_matrix *M, uint16_t row, uint16_t col, float va
 
 uint32_t coord_to_position(sparse_weight_matrix *M, uint32_t row, uint32_t col) {
     uint32_t n_col = M->n_cols;
+    uint32_t uint16_max = UINT16_MAX;
     return row * n_col + col;
 }
 
 uint32_t get_flattened_position(sparse_weight_matrix *M, uint16_t entry) {
+    // TODO: Change the relationship between row / cols and position. It would be faster with a bit shift instead of a multiplication.
+    // the idea would be to have the left 16bits of the int32 of position of row and the right ones for cols
     uint32_t row = M->rows[entry];
     uint32_t n_col = M->n_cols;
+    uint32_t uint16_max = UINT16_MAX;
     uint32_t col = M->cols[entry];
     return row * n_col + col;
 }
 
 uint16_t get_row_from_position(sparse_weight_matrix *M, uint32_t position) {
+    uint32_t uint16_max = UINT16_MAX;
     return position / M->n_cols;
 }
 
 uint16_t get_col_from_position(sparse_weight_matrix *M, uint32_t position) {
+    uint32_t uint16_max = UINT16_MAX;
     return position % M->n_cols;
 }
 
@@ -292,19 +300,6 @@ void check_order(sparse_weight_matrix *M, uint16_t entry_low, uint16_t entry_hig
     }
 }
 
-void set_position(sparse_weight_matrix *M, uint16_t entry, uint32_t position) {
-    uint16_t row = get_row_from_position(M, position);
-    uint16_t col = get_col_from_position(M, position);
-
-    assert(row < UINT16_MAX);
-    assert(col < UINT16_MAX);
-    assert(row <= M->n_rows);
-    assert(col < M->n_cols);
-
-    M->rows[entry] = (uint16_t) row;
-    M->cols[entry] = (uint16_t) col;
-}
-
 /**
  * Swap two elements of the matrix
  * @param M
@@ -320,13 +315,15 @@ void swap(sparse_weight_matrix *M, uint16_t entry_a, uint16_t entry_b) {
     float tmp_theta;
     bool tmp_sign;
 
-    assert(entry_a < M->number_of_entries);
-    assert(entry_b < M->number_of_entries);
+    if(!SKIP_CHECK){
+        assert(entry_a < M->number_of_entries);
+        assert(entry_b < M->number_of_entries);
 
-    uint32_t n_flattened = M->n_rows * M->n_cols;
-
-    assert(get_flattened_position(M, entry_a) <= n_flattened);
-    assert(get_flattened_position(M, entry_b) <= n_flattened);
+        assert(M->rows[entry_a] <= M->n_rows);
+        assert(M->rows[entry_b] <= M->n_rows);
+        assert(M->cols[entry_a] <= M->n_cols);
+        assert(M->cols[entry_b] <= M->n_cols);
+    }
 
     tmp_row = M->rows[entry_a];
     tmp_col = M->cols[entry_a];
@@ -343,6 +340,33 @@ void swap(sparse_weight_matrix *M, uint16_t entry_a, uint16_t entry_b) {
     M->thetas[entry_b] = tmp_theta;
     set_sign(M, entry_b, tmp_sign);
 
+}
+
+
+/**
+ * Swap two elements of the matrix
+ * @param M
+ * @param entry_a
+ * @param entry_b
+ */
+void overwrite_entry_by(sparse_weight_matrix *M, uint16_t entry_a, uint16_t entry_b) {
+    if(entry_a == entry_b)
+        return;
+
+    if(!SKIP_CHECK){
+        assert(entry_a < M->number_of_entries);
+        assert(entry_b < M->number_of_entries);
+
+        assert(M->rows[entry_a] <= M->n_rows);
+        assert(M->rows[entry_b] <= M->n_rows);
+        assert(M->cols[entry_a] <= M->n_cols);
+        assert(M->cols[entry_b] <= M->n_cols);
+    }
+
+    M->rows[entry_a] = M->rows[entry_b];
+    M->cols[entry_a] = M->cols[entry_b];
+    M->thetas[entry_a] = M->thetas[entry_b];
+    set_sign(M, entry_a, get_sign(M, entry_b));
 }
 
 /* This function takes last element as pivot, places
@@ -464,9 +488,12 @@ void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t s
         while (k_left < k_right && k_left_position <= k_right_position && k_right < M->number_of_entries) {
 
             if (k_right_position == k_left_position) { // This special case is important to ensure that k is at least 1
-                ignore_or_slide_copied_specific_position(M, k_left,k_right); // Move the position of split_index if equality
+                ignore_or_slide_copied_specific_position(M, k_left,k_right); // Move the position of k_right if equality
                 k_right_position = get_flattened_position(M,k_right); // Fetch the new position, if split_index was thrown out of the array its position is equal to the array size and the alogirhtm will stop.
-                assert(k_right_position > k_left_position);
+
+                if (!SKIP_CHECK)
+                    assert(k_right_position > k_left_position);
+
             } else {
                 k_left += 1;
                 k_left_position = get_flattened_position(M, k_left);  // Increase k
@@ -482,7 +509,7 @@ void sort_concatenation_of_two_sorted_arrays(sparse_weight_matrix *M, uint16_t s
 
         check_order(M, 0, k_right); // check that the left array is sorted
 
-        // Swap until the left right is sorted
+        // Swap until the right array is sorted
         j = k_right;
         position_j = get_flattened_position(M, j);
         position_j_next = get_flattened_position(M, j + 1);
@@ -548,21 +575,22 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
         return;
     }
 
-    uint32_t n_flattened = M->n_rows * M->n_cols;
     uint16_t old_n_entries = M->number_of_entries;
     M->number_of_entries = old_n_entries + n_new;
-
 
     uint16_t k;
 
     // tmp variables necessary to generate the new positions
-    uint32_t new_position;
+    uint32_t new_row;
+    uint32_t new_col;
 
-    // Generate the new ordered entries and append them into the matrix
+    // Generate the new not ordered entries and append them into the matrix
     for (k = 0; k < n_new; k++) {
-        new_position = rand_int_kiss(old_n_entries, n_flattened - 1);
-        M->rows[old_n_entries + k] = get_row_from_position(M, new_position);
-        M->cols[old_n_entries + k] = get_col_from_position(M, new_position);
+        new_row = rand_int_kiss(0, M->n_rows);
+        new_col = rand_int_kiss(0, M->n_cols);
+
+        M->rows[old_n_entries + k] = new_row;
+        M->cols[old_n_entries + k] = new_col;
         M->thetas[old_n_entries + k] = 0;
         set_sign(M, old_n_entries + k, rand_kiss() > 0.5);
     }
@@ -585,11 +613,12 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     // Hold an index k in the early part and an index new_k in the later parts.
     // Everything below k in the early part should correspond to the single array that will be sorted at the end.
     // We proceed to the loop:
-
     sort_concatenation_of_two_sorted_arrays(M, old_n_entries);
 
-    assert(M->number_of_entries <= M->max_entries);
-    check_sparse_matrix_format(M);
+    if (!SKIP_CHECK){
+        assert(M->number_of_entries <= M->max_entries);
+        check_sparse_matrix_format(M);
+    }
 }
 
 /**
@@ -622,22 +651,25 @@ void delete_negative_entries(sparse_weight_matrix *M) {
 
     uint16_t k;
     uint16_t n_negative = 0;
-    uint32_t n_flattened = M->n_cols * M->n_rows;
+    const uint16_t n_rows = M->n_rows;
+    const uint16_t n_cols = M->n_cols;
 
-    for (k = 0; k < M->number_of_entries; k++) {
+    uint16_t number_of_entries = M->number_of_entries;
 
-        if (M->thetas[k] < 0) {
-            M->rows[k - n_negative] = get_row_from_position(M, n_flattened);
-            M->cols[k - n_negative] = get_col_from_position(M, n_flattened);
+    for (k = 0; k < number_of_entries; k++) {
+
+        if (M->thetas[k] <= 0) {
             n_negative += 1;
         } else if (n_negative > 0) {
-            swap(M, k, k - n_negative);
-
+            overwrite_entry_by(M, k- n_negative, k);
         }
     }
 
     M->number_of_entries -= n_negative;
-    check_sparse_matrix_format(M);
+
+    if (!SKIP_CHECK){
+        check_sparse_matrix_format(M);
+    }
 }
 
 
@@ -659,6 +691,20 @@ void vector_substraction(float *a, uint size_a, float *b, uint size_b, float *re
     for (k = 0; k < size_a; k++) {
         result[k] = a[k] - b[k];
     }
+
+    /* TODO: If the compiler is not good it is not clear whether rewriting the code as follows is not faster.
+     * The idea is that using pointers might be faster also make comparison (k == 0 as a stop condition for the loop
+     * is faster than k< size_a)
+    uint k = size_a;
+
+    while (k--)
+    {
+        *result = *a - *b;
+        ++result;
+        ++a;
+        ++b;
+    }
+    */
 
 }
 
@@ -811,30 +857,35 @@ int get_sign_by_row_col_pair(sparse_weight_matrix *M, int i, int j) {
 void set_random_weights_sparse_matrix(sparse_weight_matrix *M, float connectivity) {
 
     uint16_t k = 0;
-    uint32_t pos = 0;
-    uint32_t n_flattened = M->n_rows * M->n_cols;
+
+    uint16_t col = 0;
+    uint16_t row = 0;
+
     float value;
 
-    while (pos < n_flattened && k < M->max_entries) {
+    while (row < M->n_rows && k < M->max_entries){
+        col=0;
+        while (col < M->n_cols && k < M->max_entries) {
 
-        if (rand_kiss() < connectivity) {
-            value = (randn_kiss() / sqrtf(M->n_rows));
+            if (rand_kiss() < connectivity) {
+                value = (randn_kiss() / sqrtf(M->n_rows));
+                M->rows[k] = row;
+                M->cols[k] = col;
+                M->thetas[k] = fabsf(value);
 
-            set_position(M, k, pos);
-            M->thetas[k] = fabsf(value);
+                if (rand_kiss() > 0.5)
+                    set_sign(M, k, true);
+                else
+                    set_sign(M, k, false);
 
-            if (rand_kiss() > 0.5)
-                set_sign(M, k, true);
-            else
-                set_sign(M, k, false);
+                k += 1;
 
-            k += 1;
-
-            M->number_of_entries = k;
-            assert(k <= M->max_entries);
+                M->number_of_entries = k;
+                assert(k <= M->max_entries);
+            }
+            col++;
         }
-        pos++;
-
+        row++;
     }
 
 }
@@ -1173,6 +1224,7 @@ void update_weight_matrix(sparse_weight_matrix *W, float *a_pre, uint size_a_pre
 
 void rewiring(sparse_weight_matrix *W) {
     delete_negative_entries(W);
+    printf("Rewiring %d connections. \n", W->max_entries - W->number_of_entries);
     put_new_random_entries(W, W->max_entries - W->number_of_entries);
 }
 
