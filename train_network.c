@@ -232,6 +232,6 @@ int train_network() {
 
     t_end = clock();
     printf("The program runs for %.1f s\n",(float)(t_end/CLOCKS_PER_SEC));
-    
+
     return 0;
 }
