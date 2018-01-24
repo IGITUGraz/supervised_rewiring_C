@@ -219,8 +219,8 @@ void print_weight_matrix_containers(sparse_weight_matrix *M, bool print_non_assi
                 break;
             }
         }
-        printf("(%d,%d)->%d \t th: %.2f sign: %d \n", M->rows[entry], M->cols[entry], get_flattened_position(M, entry),
-               M->thetas[entry], get_sign(M, entry));
+        printf("(%d,%d)->%d \t th: %.2f sign: %d   entry: %d \n", M->rows[entry], M->cols[entry], get_flattened_position(M, entry),
+               M->thetas[entry], get_sign(M, entry), entry);
     }
 }
 
@@ -379,7 +379,7 @@ void ignore_or_slide_copied_specific_position(sparse_weight_matrix *M, uint16_t 
 
     uint32_t previous_pos = get_flattened_position(M, k);
     uint32_t pos_i = get_flattened_position(M, k_to_insert);
-    uint32_t n_flattened = (uint32_t)((M->n_rows - 1) << 16) + M->n_cols;
+    uint32_t n_flattened = (uint32_t)(M->n_rows << 16);
 
     uint16_t ignore_it = 0;
     uint16_t i = k_to_insert;
@@ -546,7 +546,6 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
 
     // Sort the appended values to accelerate the insertion inside the array
     quickSort(M, old_n_entries, M->number_of_entries - 1);
-
     // Make sure there is no equality in the numbers that are the appended section of the array.
     //
     // For all pair of consecutive entries that are equal in the new elements do:
@@ -554,7 +553,6 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     // - If non of them is possible, push to the end and ignore this new entry
 
     slide_or_ignore_all_doubles(M, old_n_entries);
-
     // The algorithm now takes two separate part of the array: early part (old elements) and later part (new elements)
     // Those two parts are respectively ordered and we need to order them in a single array. One may want to use quick
     // sort here again but I think it more efficient to do as follow:
@@ -563,6 +561,7 @@ void put_new_random_entries(sparse_weight_matrix *M, uint16_t n_new) {
     // Everything below k in the early part should correspond to the single array that will be sorted at the end.
     // We proceed to the loop:
     sort_concatenation_of_two_sorted_arrays(M, old_n_entries);
+
 
     if (!SKIP_CHECK){
         assert(M->number_of_entries <= M->max_entries);
@@ -1145,7 +1144,7 @@ uint8_t argmax(float *prob, uint8_t size_prob) {
 void eliminate_same_position(sparse_weight_matrix *M){
     uint16_t k;
     uint32_t position_k, position_k_pre;
-    uint32_t n_flattened = ((M->n_rows - 1) << 16) + M->n_cols;
+    uint32_t n_flattened = (uint32_t)(M->n_rows << 16);
     bool old_entry_k, no_slide;
 
     //it is possible that several occupay the same position, the for loop only one, so we need the while loop
